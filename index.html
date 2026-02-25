@@ -28,7 +28,7 @@ body{font-family:'Lato',sans-serif;min-height:100vh;background:var(--cream);}
 .divider span{color:var(--gold);font-size:13px;}
 .btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--green),#3D6B3F);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:'Lato',sans-serif;letter-spacing:1px;cursor:pointer;transition:all .25s;margin-top:8px;}
 .btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(90,122,92,.3);}
-.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;filter:grayscale(.4);}
 .btn-wa{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:linear-gradient(135deg,var(--wa),var(--wa-dark));color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:'Lato',sans-serif;cursor:pointer;transition:all .25s;text-decoration:none;margin-top:10px;}
 .btn-wa:hover{transform:translateY(-2px);}
 .btn-sm{padding:8px 16px;font-size:13px;border-radius:10px;border:none;cursor:pointer;font-family:'Lato',sans-serif;font-weight:700;transition:all .2s;}
@@ -254,7 +254,8 @@ input.error{border-color:var(--red);background:#fff5f5;}
         <div class="counter-note">Ketuk − atau + untuk mengubah jumlah</div>
       </div>
       <div class="err-msg" id="err-double" style="font-size:13px;margin-bottom:8px;">❌ Nama ini sudah terdaftar hadir hari ini!</div>
-      <button class="btn" onclick="submitAbsen()" id="btn-submit">✓ &nbsp; Konfirmasi Hadir</button>
+      <div id="info-belum-lengkap" style="display:none;background:#FFF8E7;border:1.5px solid var(--gold);border-radius:12px;padding:11px 14px;font-size:12px;color:var(--brown);margin-top:8px;text-align:center;">⚠️ Pilih nama dari daftar, atau isi nomor HP untuk anggota baru</div>
+      <button class="btn" onclick="submitAbsen()" id="btn-submit" disabled>✓ &nbsp; Konfirmasi Hadir</button>
     </div>
     <div class="success" id="success-msg">
       <div class="success-icon">🎉</div>
@@ -458,15 +459,11 @@ input.error{border-color:var(--red);background:#fff5f5;}
 // ║         K O N F I G U R A S I                   ║
 // ╚══════════════════════════════════════════════════╝
 const CONFIG = {
-<<<<<<< HEAD
-  namaAcara    : "Arisan Keluarga Besar Sumbayak",
-=======
   namaAcara    : "Arisan Keluarga Besar",
->>>>>>> cdaf0ae0ea2fd9336fbd5cf24f7c0019732c8ee1
-  tanggal      : "Sabtu, 1 Mei 2026",
+  tanggal      : "Sabtu, 1 Maret 2026",
   waktu        : "09.00 WIB",
   tempat       : "Rumah Pak Budi, Jl. Melati No. 12",
-  expiredAt    : "2026-05-01T14:00:00",
+  expiredAt    : "2026-03-01T14:00:00",
   pesanPenutup : "Sampai Jumpa Bulan Depan! 👋",
   pesanSub     : "Semoga silaturahmi kita terus terjaga.",
   supabaseUrl  : "https://ojbpbgxyehsqbowemnyn.supabase.co",
@@ -485,19 +482,33 @@ let peserta=[],anggota=[],allAnggota=[],allAbsen=[],jumlah=1,pilihanAnggota=null
 
 // ── ROUTING ──
 async function init(){
-  const isAdmin=location.search.includes('admin');
-  if(isAdmin){
-    document.getElementById('halaman-admin').style.display='block';
-    document.getElementById('adm-sub').textContent=CONFIG.namaAcara;
-    cekSesiAdmin(); // langsung masuk jika sesi masih aktif
-  } else if(new Date()>=expDate){
-    await muatExpired();
-    document.getElementById('halaman-expired').style.display='block';
-  } else {
-    await muatForm();
-    document.getElementById('halaman-form').style.display='block';
-    startCountdown();
-    subscribeRealtime();
+  try{
+    const isAdmin=location.search.includes('admin');
+    if(isAdmin){
+      document.getElementById('halaman-admin').style.display='block';
+      document.getElementById('adm-sub').textContent=CONFIG.namaAcara;
+      cekSesiAdmin();
+    } else if(new Date()>=expDate){
+      await muatExpired();
+      document.getElementById('halaman-expired').style.display='block';
+    } else {
+      await muatForm();
+      document.getElementById('halaman-form').style.display='block';
+      startCountdown();
+      subscribeRealtime();
+    }
+  } catch(e){
+    console.error('Init error:',e);
+    // Tampilkan pesan error supaya tidak blank
+    document.getElementById('loading-screen').innerHTML=`
+      <div style="text-align:center;padding:30px;max-width:320px">
+        <div style="font-size:40px;margin-bottom:16px">⚠️</div>
+        <div style="font-family:'Playfair Display',serif;font-size:18px;color:#3D2B1F;margin-bottom:8px">Gagal Memuat</div>
+        <div style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.6">Tidak dapat terhubung ke server.<br>Periksa koneksi internet Anda.</div>
+        <div style="font-size:11px;color:#BBB;background:#f5f5f5;padding:10px;border-radius:8px;word-break:break-all">${e.message||'Unknown error'}</div>
+        <button onclick="location.reload()" style="margin-top:16px;padding:12px 28px;background:#5A7A5C;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">🔄 Coba Lagi</button>
+      </div>`;
+    return;
   }
   document.getElementById('loading-screen').style.display='none';
 }
@@ -528,11 +539,17 @@ function startCountdown(){
 }
 
 async function loadAnggota(){const{data}=await db.from(CONFIG.tabelAnggota).select('*').order('nama');anggota=data||[];}
-async function loadAbsen(){const{data}=await db.from(CONFIG.tabelAbsen).select('*').order('waktu',{ascending:true});peserta=data||[];renderList();updateWaButtons();}
+async function loadAbsen(){
+  const{data}=await db.from(CONFIG.tabelAbsen).select('*')
+    .eq('nama_acara',CONFIG.namaAcara)
+    .eq('tanggal_acara',CONFIG.tanggal)
+    .order('waktu',{ascending:true});
+  peserta=data||[];renderList();updateWaButtons();
+}
 
 function subscribeRealtime(){
   db.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:CONFIG.tabelAbsen},p=>{
-    peserta.push(p.new);renderList(p.new.nama);updateWaButtons();
+    if(p.new.nama_acara===CONFIG.namaAcara&&p.new.tanggal_acara===CONFIG.tanggal){peserta.push(p.new);renderList(p.new.nama);updateWaButtons();}
   }).subscribe();
 }
 
@@ -544,6 +561,7 @@ namaInput.addEventListener('input',function(){
   pilihanAnggota=null;
   document.getElementById('hp-group').style.display='none';
   document.getElementById('hp-display-group').style.display='none';
+  cekTombol();
   if(!q){acList.style.display='none';return;}
   const cocok=anggota.filter(a=>a.nama.toLowerCase().includes(q));
   const tepat=anggota.find(a=>a.nama.toLowerCase()===q);
@@ -560,6 +578,7 @@ function pilihAnggota(id,nama,hp){
   document.getElementById('hp-group').style.display='none';
   if(hp){document.getElementById('hp-display-group').style.display='block';document.getElementById('hp-display').value=hp;}
   else document.getElementById('hp-display-group').style.display='none';
+  cekTombol();
 }
 
 function pilihBaru(){
@@ -568,9 +587,32 @@ function pilihBaru(){
   document.getElementById('hp-group').style.display='block';
   document.getElementById('hp-display-group').style.display='none';
   document.getElementById('hp-input').focus();
+  cekTombol();
 }
 
-document.getElementById('hp-input').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'');});
+document.getElementById('hp-input').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'');cekTombol();});
+function cekTombol(){
+  const btn=document.getElementById('btn-submit');
+  const info=document.getElementById('info-belum-lengkap');
+  const namaAda=namaInput.value.trim().length>0;
+  let boleh=false;
+  if(pilihanAnggota&&!pilihanAnggota.isNew){
+    // Anggota lama dipilih dari daftar → langsung boleh
+    boleh=true;
+  } else if(pilihanAnggota&&pilihanAnggota.isNew){
+    // Anggota baru → wajib isi HP min 10 digit
+    const hp=document.getElementById('hp-input').value.trim();
+    boleh=hp.length>=10;
+  }
+  btn.disabled=!boleh;
+  btn.style.opacity=boleh?'1':'0.35';
+  btn.style.cursor=boleh?'pointer':'not-allowed';
+  if(namaAda&&!boleh&&pilihanAnggota&&pilihanAnggota.isNew){
+    info.style.display='block';
+  } else {
+    info.style.display='none';
+  }
+}
 function tambah(){jumlah=Math.min(jumlah+1,99);document.getElementById('counter-val').textContent=jumlah;}
 function kurang(){jumlah=Math.max(jumlah-1,1);document.getElementById('counter-val').textContent=jumlah;}
 
@@ -649,7 +691,7 @@ async function muatExpired(){
   document.getElementById('e-waktu-tutup').textContent=expDate.toLocaleString('id-ID',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
   document.getElementById('e-pesan').textContent=CONFIG.pesanPenutup;
   document.getElementById('e-pesan-sub').innerHTML=CONFIG.pesanSub;
-  const{data}=await db.from(CONFIG.tabelAbsen).select('*').order('waktu',{ascending:true});
+  const{data}=await db.from(CONFIG.tabelAbsen).select('*').eq('nama_acara',CONFIG.namaAcara).eq('tanggal_acara',CONFIG.tanggal).order('waktu',{ascending:true});
   const list=data||[],tot=list.reduce((s,p)=>s+p.jumlah,0);
   document.getElementById('e-total-orang').textContent=tot;
   document.getElementById('e-total-peserta').textContent=list.length;
