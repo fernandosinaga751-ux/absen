@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daftar Hadir</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--cream:#FDF6EC;--brown:#8B5E3C;--dark:#3D2B1F;--gold:#C49A4A;--green:#5A7A5C;--red:#C0392B;--wa:#25D366;--wa-dark:#128C7E;--blue:#2471A3;}
+body{font-family:'Lato',sans-serif;min-height:100vh;background:var(--cream);}
+
+/* LOADING */
+#loading-screen{display:flex;position:fixed;inset:0;z-index:99999;background:var(--cream);align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.spinner{width:40px;height:40px;border:3px solid rgba(196,154,74,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+.loading-text{font-size:13px;color:var(--brown);}
+
+/* SHARED */
+.page{max-width:480px;margin:0 auto;padding:28px 20px 60px;}
+.card{background:white;border-radius:20px;padding:20px;box-shadow:0 4px 24px rgba(61,43,31,.08);margin-bottom:14px;border:1px solid rgba(196,154,74,.15);}
+.card-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:3px;}
+.card-value{font-family:'Playfair Display',serif;font-size:14px;color:var(--dark);}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.divider{display:flex;align-items:center;gap:12px;margin:14px 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:linear-gradient(to right,transparent,var(--gold));}
+.divider::after{background:linear-gradient(to left,transparent,var(--gold));}
+.divider span{color:var(--gold);font-size:13px;}
+.btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--green),#3D6B3F);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:'Lato',sans-serif;letter-spacing:1px;cursor:pointer;transition:all .25s;margin-top:8px;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(90,122,92,.3);}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-wa{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:linear-gradient(135deg,var(--wa),var(--wa-dark));color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:'Lato',sans-serif;cursor:pointer;transition:all .25s;text-decoration:none;margin-top:10px;}
+.btn-wa:hover{transform:translateY(-2px);}
+.btn-sm{padding:8px 16px;font-size:13px;border-radius:10px;border:none;cursor:pointer;font-family:'Lato',sans-serif;font-weight:700;transition:all .2s;}
+.btn-green{background:var(--green);color:white;}
+.btn-red{background:var(--red);color:white;}
+.btn-gold{background:var(--gold);color:white;}
+.btn-sm:hover{opacity:.85;transform:translateY(-1px);}
+input,select{width:100%;padding:12px 15px;border:1.5px solid #E8E0D5;border-radius:12px;font-size:15px;font-family:'Lato',sans-serif;color:var(--dark);background:var(--cream);transition:all .2s;outline:none;}
+input:focus,select:focus{border-color:var(--gold);background:white;box-shadow:0 0 0 3px rgba(196,154,74,.12);}
+input::placeholder{color:#C5BDB5;}
+input.error{border-color:var(--red);background:#fff5f5;}
+.input-group{margin-bottom:13px;}
+.input-group label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--brown);margin-bottom:6px;}
+.err-msg{font-size:12px;color:var(--red);margin-top:4px;display:none;}
+.wa-icon{width:22px;height:22px;flex-shrink:0;fill:white;}
+
+/* HEADER */
+.header{text-align:center;margin-bottom:24px;}
+.ornament{color:var(--gold);font-size:18px;letter-spacing:8px;margin-bottom:10px;display:block;}
+.header h1{font-family:'Playfair Display',serif;font-size:28px;color:var(--dark);margin-bottom:4px;}
+.header .subtitle{font-size:11px;color:var(--brown);letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+
+/* COUNTDOWN */
+.countdown-bar{background:linear-gradient(135deg,#2C3E50,#34495E);border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;color:white;}
+.cd-label{font-size:11px;opacity:.6;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+.cd-time{font-family:'Playfair Display',serif;font-size:20px;color:var(--gold);}
+.cd-status{font-size:11px;opacity:.5;}
+
+/* AUTOCOMPLETE */
+.autocomplete-wrap{position:relative;}
+.ac-list{position:absolute;top:100%;left:0;right:0;z-index:100;background:white;border:1.5px solid var(--gold);border-top:none;border-radius:0 0 12px 12px;max-height:220px;overflow-y:auto;box-shadow:0 8px 20px rgba(61,43,31,.12);display:none;}
+.ac-item{padding:11px 15px;cursor:pointer;font-size:14px;color:var(--dark);border-bottom:1px solid #F5EDE0;transition:background .15s;}
+.ac-item:last-child{border-bottom:none;}
+.ac-item:hover{background:#FFF8EE;}
+.ac-sub{font-size:11px;color:#AAA;margin-top:2px;}
+.ac-new{padding:10px 15px;font-size:12px;color:var(--gold);cursor:pointer;border-top:1px dashed #E8E0D5;}
+.ac-new:hover{background:#FFF8EE;}
+.tag-new{background:#E8F5E9;color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;margin-left:6px;}
+
+/* COUNTER */
+.counter-group{margin-bottom:14px;}
+.counter-group label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--brown);margin-bottom:6px;}
+.counter-wrap{display:flex;align-items:center;background:var(--cream);border:1.5px solid #E8E0D5;border-radius:12px;overflow:hidden;}
+.counter-btn{width:54px;height:50px;border:none;background:transparent;font-size:22px;color:var(--brown);cursor:pointer;transition:background .15s;flex-shrink:0;}
+.counter-btn:hover{background:rgba(196,154,74,.12);}
+.counter-val{flex:1;text-align:center;font-family:'Playfair Display',serif;font-size:22px;color:var(--dark);}
+.counter-note{font-size:11px;color:#AAA;margin-top:4px;}
+
+/* LIVE */
+.live-badge{display:inline-flex;align-items:center;gap:6px;background:#1a1a2e;color:#7EC8E3;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:20px;margin-bottom:10px;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#7EC8E3;animation:blink 1.2s ease infinite;}
+.total-bar{background:linear-gradient(135deg,var(--dark),#6B3F2A);border-radius:14px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;color:white;}
+.t-label{font-size:11px;opacity:.6;text-transform:uppercase;letter-spacing:1px;}
+.t-sub{font-size:10px;opacity:.4;margin-top:2px;}
+.t-val{font-family:'Playfair Display',serif;font-size:26px;color:var(--gold);}
+.list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.list-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--dark);}
+.count-badge{background:var(--green);color:white;font-size:11px;font-weight:700;padding:3px 11px;border-radius:20px;}
+.attendee-list{display:flex;flex-direction:column;gap:8px;}
+.attendee-item{display:flex;align-items:center;gap:12px;background:white;border-radius:14px;padding:11px 15px;box-shadow:0 2px 8px rgba(61,43,31,.06);border:1px solid rgba(196,154,74,.1);}
+.attendee-item.new-entry{border-color:var(--wa);box-shadow:0 0 0 2px rgba(37,211,102,.2);}
+.attendee-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--brown));display:flex;align-items:center;justify-content:center;color:white;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;flex-shrink:0;}
+.attendee-info{flex:1;min-width:0;}
+.attendee-name{font-size:14px;font-weight:700;color:var(--dark);}
+.attendee-meta{font-size:11px;color:#AAA;margin-top:2px;}
+.attendee-right{text-align:right;flex-shrink:0;}
+.attendee-jumlah{font-family:'Playfair Display',serif;font-size:19px;color:var(--green);font-weight:700;}
+.attendee-jumlah-label{font-size:10px;color:#CCC;}
+.empty-state{text-align:center;padding:26px;color:#CCC;font-size:13px;}
+.empty-icon{font-size:32px;margin-bottom:8px;}
+
+/* ALREADY */
+.already-box{display:none;background:#FFF8E7;border:1.5px solid var(--gold);border-radius:16px;padding:20px;text-align:center;margin-bottom:14px;}
+.already-box .icon{font-size:36px;margin-bottom:8px;}
+.already-box h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--dark);margin-bottom:5px;}
+.already-box p{font-size:13px;color:#888;margin-bottom:10px;}
+.success{display:none;text-align:center;padding:14px 0;}
+.success-icon{width:66px;height:66px;background:#E8F0E9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:28px;animation:pop .4s cubic-bezier(.175,.885,.32,1.275) both;}
+.success h3{font-family:'Playfair Display',serif;font-size:20px;color:var(--dark);margin-bottom:5px;}
+.success p{font-size:13px;color:#888;margin-bottom:4px;}
+
+/* EXPIRED */
+#halaman-expired{display:none;min-height:100vh;background:linear-gradient(160deg,#0d1a0d,#1a0d07,#0d0d1a);overflow-y:auto;}
+.exp-stars{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+.exp-star{position:absolute;border-radius:50%;background:var(--gold);opacity:0;animation:twinkle var(--dur,3s) ease-in-out infinite;animation-delay:var(--delay,0s);}
+.exp-content{position:relative;z-index:1;max-width:420px;margin:0 auto;padding:60px 24px 80px;text-align:center;}
+.exp-badge{display:inline-block;background:rgba(196,154,74,.15);border:1px solid rgba(196,154,74,.3);color:var(--gold);font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;padding:6px 16px;border-radius:20px;margin-bottom:28px;}
+.exp-moon{font-size:64px;display:block;margin-bottom:16px;animation:float 4s ease-in-out infinite;}
+.exp-acara{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);margin-bottom:6px;}
+.exp-title{font-family:'Playfair Display',serif;font-size:30px;color:white;line-height:1.2;margin-bottom:6px;}
+.exp-tanggal{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:32px;}
+.exp-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;}
+.exp-stat{background:rgba(255,255,255,.06);border:1px solid rgba(196,154,74,.2);border-radius:18px;padding:20px 12px;}
+.exp-stat-val{font-family:'Playfair Display',serif;font-size:42px;color:var(--gold);display:block;margin-bottom:4px;}
+.exp-stat-label{font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;}
+.exp-list{background:rgba(255,255,255,.05);border:1px solid rgba(196,154,74,.15);border-radius:18px;padding:20px;margin-bottom:28px;text-align:left;}
+.exp-list-title{font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;text-align:center;}
+.exp-list-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.exp-list-item:last-child{border-bottom:none;}
+.exp-list-no{width:26px;height:26px;border-radius:50%;background:rgba(196,154,74,.15);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gold);font-weight:700;flex-shrink:0;}
+.exp-list-nama{font-size:14px;color:rgba(255,255,255,.85);flex:1;}
+.exp-list-sub{font-size:11px;color:rgba(255,255,255,.3);}
+.exp-list-jml{font-family:'Playfair Display',serif;font-size:18px;color:var(--green);}
+.exp-list-jml-label{font-size:10px;color:rgba(255,255,255,.3);}
+.exp-message{font-family:'Playfair Display',serif;font-size:22px;color:white;line-height:1.4;margin-bottom:8px;}
+.exp-sub{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:28px;line-height:1.7;}
+.exp-wa{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:linear-gradient(135deg,var(--wa),var(--wa-dark));color:white;border:none;border-radius:16px;font-size:15px;font-weight:700;font-family:'Lato',sans-serif;cursor:pointer;text-decoration:none;}
+.exp-footer{font-size:11px;color:rgba(255,255,255,.2);margin-top:28px;line-height:1.8;}
+
+/* ADMIN */
+#halaman-admin{display:none;background:#F4F6F8;min-height:100vh;}
+.admin-header{background:linear-gradient(135deg,var(--dark),#6B3F2A);padding:20px;color:white;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.admin-header h2{font-family:'Playfair Display',serif;font-size:22px;}
+.admin-nav{display:flex;gap:8px;padding:0 20px 0;background:linear-gradient(135deg,var(--dark),#6B3F2A);overflow-x:auto;padding-bottom:0;}
+.admin-tab{padding:10px 18px;border-radius:12px 12px 0 0;border:none;font-size:13px;font-weight:700;font-family:'Lato',sans-serif;cursor:pointer;transition:all .2s;white-space:nowrap;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);}
+.admin-tab.active{background:white;color:var(--dark);}
+.admin-body{padding:20px;max-width:900px;margin:0 auto;}
+.member-table{width:100%;border-collapse:collapse;background:white;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.member-table th{background:var(--dark);color:white;padding:12px 16px;font-size:11px;font-weight:700;text-align:left;letter-spacing:1px;text-transform:uppercase;}
+.member-table td{padding:12px 16px;font-size:14px;border-bottom:1px solid #F0F0F0;color:var(--dark);}
+.member-table tr:last-child td{border-bottom:none;}
+.member-table tr:hover td{background:#FAFAFA;}
+.rekap-table{width:100%;border-collapse:collapse;background:white;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.rekap-table th{background:var(--dark);color:white;padding:10px 8px;text-align:center;font-size:11px;font-weight:700;white-space:nowrap;}
+.rekap-table th.nama-col{text-align:left;padding-left:14px;min-width:140px;}
+.rekap-table td{padding:9px 8px;border-bottom:1px solid #F0F0F0;text-align:center;color:var(--dark);}
+.rekap-table td.nama-col{text-align:left;padding-left:14px;font-weight:700;font-size:13px;}
+.rekap-table tr:hover td{background:#FAFAFA;}
+.hadir-dot{width:26px;height:26px;border-radius:50%;background:var(--green);display:inline-flex;align-items:center;justify-content:center;color:white;font-size:13px;font-weight:700;}
+.tidak-dot{width:26px;height:26px;border-radius:50%;background:#EEE;display:inline-flex;align-items:center;justify-content:center;color:#CCC;font-size:13px;}
+.total-chip{background:var(--gold);color:white;padding:3px 10px;border-radius:10px;font-weight:700;font-size:12px;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:white;border-radius:14px;padding:16px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.stat-val{font-family:'Playfair Display',serif;font-size:32px;color:var(--green);}
+.stat-label{font-size:11px;color:#AAA;margin-top:4px;text-transform:uppercase;letter-spacing:1px;}
+.add-form{background:white;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.add-form h3{font-family:'Playfair Display',serif;font-size:17px;color:var(--dark);margin-bottom:16px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:500px){.form-row{grid-template-columns:1fr;}}
+.login-box{max-width:340px;margin:80px auto;background:white;border-radius:20px;padding:32px;box-shadow:0 8px 32px rgba(0,0,0,.1);text-align:center;}
+.login-box h2{font-family:'Playfair Display',serif;font-size:22px;color:var(--dark);margin-bottom:6px;}
+.login-box p{font-size:13px;color:#999;margin-bottom:20px;}
+.year-sel{padding:8px 14px;border-radius:10px;border:1.5px solid #E8E0D5;font-family:'Lato',sans-serif;font-size:14px;color:var(--dark);background:white;cursor:pointer;width:auto;}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes twinkle{0%,100%{opacity:0;transform:scale(.5)}50%{opacity:.6;transform:scale(1)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-text">Memuat sistem...</div>
+</div>
+
+<!-- ═══════ FORM ABSEN ═══════ -->
+<div id="halaman-form" style="display:none">
+<div class="page">
+  <div class="header">
+    <span class="ornament">✦ ✦ ✦</span>
+    <h1>Daftar Hadir</h1>
+    <p class="subtitle" id="f-subtitle">Acara Keluarga</p>
+    <div class="divider"><span>❧</span></div>
+  </div>
+  <div class="card">
+    <div class="info-grid">
+      <div><div class="card-label">📅 Tanggal</div><div class="card-value" id="f-tanggal">—</div></div>
+      <div><div class="card-label">⏰ Waktu</div><div class="card-value" id="f-waktu">—</div></div>
+      <div style="grid-column:1/-1"><div class="card-label">📍 Tempat</div><div class="card-value" id="f-tempat">—</div></div>
+      <div style="grid-column:1/-1"><div class="card-label">🎉 Acara</div><div class="card-value" id="f-acara">—</div></div>
+    </div>
+  </div>
+  <div class="countdown-bar">
+    <div><div class="cd-label">⏳ Ditutup dalam</div><div class="cd-time" id="cd-time">--:--:--</div></div>
+    <div style="text-align:right"><div class="cd-label">Tutup pada</div><div class="cd-status" id="cd-tutup">—</div></div>
+  </div>
+
+  <!-- Sudah absen -->
+  <div class="already-box" id="already-box">
+    <div class="icon">✅</div><h3>Sudah Tercatat!</h3>
+    <p id="already-msg">Anda sudah terdaftar hadir.</p>
+    <a class="btn-wa" id="btn-wa-already" href="#" target="_blank">
+      <svg class="wa-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.855L.057 23.882l6.17-1.617C7.85 23.399 9.89 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.886 0-3.655-.49-5.187-1.349l-.371-.22-3.862 1.013 1.033-3.77-.242-.387C2.497 15.82 2 13.976 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+      Kirim Update ke Grup WA
+    </a>
+  </div>
+
+  <!-- Form -->
+  <div class="card" id="form-card">
+    <div id="form-content">
+      <p style="font-family:'Playfair Display',serif;font-size:18px;color:var(--dark);margin-bottom:4px;">Isi Daftar Hadir</p>
+      <p style="font-size:12px;color:#999;margin-bottom:18px;">Ketik nama → pilih dari daftar anggota</p>
+      <div class="input-group">
+        <label>Nama Lengkap</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="nama-input" placeholder="Ketik nama anggota..." autocomplete="off"/>
+          <div class="ac-list" id="ac-list"></div>
+        </div>
+        <div class="err-msg" id="err-nama">Nama tidak boleh kosong</div>
+      </div>
+      <div class="input-group" id="hp-group" style="display:none">
+        <label>Nomor HP/WA <span class="tag-new">Anggota Baru</span></label>
+        <input type="tel" id="hp-input" placeholder="08123456789" inputmode="numeric"/>
+        <div style="font-size:11px;color:var(--gold);margin-top:4px;">Nama baru akan disimpan ke database anggota</div>
+        <div class="err-msg" id="err-hp">Nomor HP tidak valid (min. 10 digit)</div>
+      </div>
+      <div class="input-group" id="hp-display-group" style="display:none">
+        <label>Nomor HP/WA</label>
+        <input type="text" id="hp-display" readonly style="background:#F5F5F5;color:#888;"/>
+      </div>
+      <div class="counter-group">
+        <label>Jumlah Orang Hadir (termasuk Anda)</label>
+        <div class="counter-wrap">
+          <button class="counter-btn" onclick="kurang()">−</button>
+          <span class="counter-val" id="counter-val">1</span>
+          <button class="counter-btn" onclick="tambah()">+</button>
+        </div>
+        <div class="counter-note">Ketuk − atau + untuk mengubah jumlah</div>
+      </div>
+      <div class="err-msg" id="err-double" style="font-size:13px;margin-bottom:8px;">❌ Nama ini sudah terdaftar hadir hari ini!</div>
+      <button class="btn" onclick="submitAbsen()" id="btn-submit">✓ &nbsp; Konfirmasi Hadir</button>
+    </div>
+    <div class="success" id="success-msg">
+      <div class="success-icon">🎉</div>
+      <h3>Terima Kasih!</h3>
+      <p id="success-detail">Kehadiran tersimpan.</p>
+      <p style="font-size:12px;color:#BBB;margin-bottom:2px;">Beritahu grup 👇</p>
+      <a class="btn-wa" id="btn-wa-success" href="#" target="_blank">
+        <svg class="wa-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.855L.057 23.882l6.17-1.617C7.85 23.399 9.89 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.886 0-3.655-.49-5.187-1.349l-.371-.22-3.862 1.013 1.033-3.77-.242-.387C2.497 15.82 2 13.976 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        Kirim Update ke Grup WA
+      </a>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div style="margin-top:16px">
+    <div><div class="live-badge"><span class="live-dot"></span> LIVE · Update Otomatis</div></div>
+    <div class="total-bar" style="margin-top:8px">
+      <div><div class="t-label">Total Kehadiran</div><div class="t-sub">realtime</div></div>
+      <div class="t-val" id="total-orang">0 orang</div>
+    </div>
+    <div class="list-header">
+      <span class="list-title">Daftar Peserta</span>
+      <span class="count-badge" id="count-badge">0 entri</span>
+    </div>
+    <div class="attendee-list" id="attendee-list">
+      <div class="empty-state"><div class="empty-icon">🌿</div>Belum ada yang hadir</div>
+    </div>
+    <button class="btn-wa" onclick="kirimWaList()" style="margin-top:12px">
+      <svg class="wa-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.855L.057 23.882l6.17-1.617C7.85 23.399 9.89 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.886 0-3.655-.49-5.187-1.349l-.371-.22-3.862 1.013 1.033-3.77-.242-.387C2.497 15.82 2 13.976 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+      📋 Kirim Rekap ke Grup WA
+    </button>
+  </div>
+  <div style="text-align:center;margin-top:24px;font-size:11px;color:#CCC">
+    Dibuat dengan ❤️ · <a href="?admin" style="color:var(--gold);text-decoration:none">Panel Admin</a>
+  </div>
+</div>
+</div>
+
+<!-- ═══════ EXPIRED ═══════ -->
+<div id="halaman-expired">
+  <div class="exp-stars" id="exp-stars"></div>
+  <div class="exp-content">
+    <div class="exp-badge">✦ Kegiatan Telah Selesai ✦</div>
+    <span class="exp-moon">🌙</span>
+    <div class="exp-acara" id="e-nama-acara">—</div>
+    <div class="exp-title">Terima Kasih<br>Atas Kehadiran Anda</div>
+    <div class="exp-tanggal" id="e-tanggal">—</div>
+    <div class="exp-stats">
+      <div class="exp-stat"><span class="exp-stat-val" id="e-total-orang">—</span><span class="exp-stat-label">Total Orang</span></div>
+      <div class="exp-stat"><span class="exp-stat-val" id="e-total-peserta">—</span><span class="exp-stat-label">Peserta</span></div>
+    </div>
+    <div class="exp-list">
+      <div class="exp-list-title">📋 Yang Hadir</div>
+      <div id="e-list"><div style="text-align:center;color:rgba(255,255,255,.3);font-size:13px;padding:10px">Memuat...</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:0 0 22px"><div style="flex:1;height:1px;background:rgba(196,154,74,.2)"></div><span style="color:var(--gold)">❧</span><div style="flex:1;height:1px;background:rgba(196,154,74,.2)"></div></div>
+    <div class="exp-message" id="e-pesan">Sampai Jumpa!</div>
+    <div class="exp-sub" id="e-pesan-sub">Semoga silaturahmi kita terus terjaga.</div>
+    <a class="exp-wa" id="e-btn-wa" href="#" target="_blank">
+      <svg class="wa-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.532 5.855L.057 23.882l6.17-1.617C7.85 23.399 9.89 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.886 0-3.655-.49-5.187-1.349l-.371-.22-3.862 1.013 1.033-3.77-.242-.387C2.497 15.82 2 13.976 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+      Kirim Rekap ke Grup WhatsApp
+    </a>
+    <div class="exp-footer">Ditutup: <span id="e-waktu-tutup">—</span><br>Dibuat dengan ❤️</div>
+  </div>
+</div>
+
+<!-- ═══════ ADMIN ═══════ -->
+<div id="halaman-admin">
+  <div id="admin-login">
+    <div class="login-box">
+      <div style="font-size:40px;margin-bottom:12px">🔐</div>
+      <h2>Admin Panel</h2>
+      <p>Masukkan password untuk masuk</p>
+      <div class="input-group" style="text-align:left">
+        <label>Password</label>
+        <input type="password" id="admin-pass-input" placeholder="Password admin" onkeypress="if(event.key==='Enter')cekLogin()"/>
+        <div class="err-msg" id="err-login">Password salah!</div>
+      </div>
+      <button class="btn" onclick="cekLogin()">Masuk</button>
+      <p style="margin-top:14px;font-size:11px;color:#CCC"><a href="?" style="color:var(--gold)">← Kembali ke Absen</a></p>
+    </div>
+  </div>
+
+  <div id="admin-dashboard" style="display:none">
+    <div class="admin-header">
+      <div><h2>🗂️ Admin Panel</h2><div style="font-size:12px;opacity:.6;margin-top:2px" id="adm-sub">—</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a href="?" style="color:rgba(255,255,255,.6);font-size:12px;text-decoration:none">← Ke Absen</a>
+        <button onclick="logout()" class="btn-sm btn-red" style="padding:6px 12px">Keluar</button>
+      </div>
+    </div>
+    <div class="admin-nav">
+      <button class="admin-tab active" onclick="gotoTab('anggota')">👥 Anggota</button>
+      <button class="admin-tab" onclick="gotoTab('rekap')">📊 Rekap Tahunan</button>
+      <button class="admin-tab" onclick="gotoTab('riwayat')">📋 Riwayat</button>
+      <button class="admin-tab" onclick="gotoTab('jadwal')">⚙️ Jadwal</button>
+    </div>
+
+    <div class="admin-body">
+      <!-- TAB ANGGOTA -->
+      <div id="tab-anggota">
+        <div class="add-form">
+          <h3>➕ Tambah Anggota</h3>
+          <div class="form-row">
+            <div class="input-group" style="margin:0"><label>Nama Lengkap</label><input type="text" id="add-nama" placeholder="Nama lengkap"/></div>
+            <div class="input-group" style="margin:0"><label>Nomor HP/WA</label><input type="tel" id="add-hp" placeholder="08123456789" inputmode="numeric"/></div>
+          </div>
+          <button class="btn-sm btn-green" onclick="tambahAnggota()" style="padding:10px 24px">Simpan</button>
+          <span id="add-msg" style="font-size:12px;margin-left:10px;color:var(--green)"></span>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val" id="stat-anggota">—</div><div class="stat-label">Total Anggota</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-bln">—</div><div class="stat-label">Absen Bulan Ini</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-thn">—</div><div class="stat-label">Absen Tahun Ini</div></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <span style="font-weight:700;color:var(--dark)">Daftar Anggota</span>
+          <input type="text" id="search-anggota" placeholder="🔍 Cari..." style="width:160px;padding:8px 12px;font-size:13px;border-radius:10px" oninput="filterAnggota()"/>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="member-table"><thead><tr><th>#</th><th>Nama</th><th>No HP</th><th>Terdaftar</th><th>Total Hadir</th><th>Aksi</th></tr></thead><tbody id="member-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- TAB REKAP -->
+      <div id="tab-rekap" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <span style="font-weight:700;color:var(--dark);font-size:16px">📊 Rekap Kehadiran Tahunan</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select class="year-sel" id="tahun-sel" onchange="muatRekap()"></select>
+            <button class="btn-sm btn-green" onclick="eksporRekapWA()">📲 Kirim WA</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto"><table class="rekap-table"><thead id="rekap-thead"></thead><tbody id="rekap-tbody"></tbody></table></div>
+      </div>
+
+      <!-- TAB RIWAYAT -->
+      <div id="tab-riwayat" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+          <span style="font-weight:700;color:var(--dark);font-size:16px">📋 Riwayat Absensi</span>
+          <input type="month" id="filter-bulan" style="padding:8px 12px;border-radius:10px;border:1.5px solid #E8E0D5;font-family:'Lato',sans-serif;width:auto" onchange="muatRiwayat()"/>
+        </div>
+        <div style="overflow-x:auto"><table class="member-table"><thead><tr><th>#</th><th>Nama</th><th>No HP</th><th>Jml</th><th>Waktu</th><th>Acara</th></tr></thead><tbody id="riwayat-tbody"></tbody></table></div>
+      </div>
+      <!-- TAB JADWAL -->
+      <div id="tab-jadwal" style="display:none">
+        <div class="add-form">
+          <h3>⚙️ Pengaturan Jadwal Berikutnya</h3>
+          <p style="font-size:13px;color:#888;margin-bottom:18px;line-height:1.6;">
+            Setiap bulan, ubah 3 baris di bawah ini lalu upload ulang file ke Netlify.<br>
+            Data anggota & riwayat absen <strong>tidak akan terhapus</strong>.
+          </p>
+
+          <div style="background:#1a1a2e;border-radius:14px;padding:18px;margin-bottom:20px">
+            <div style="font-size:11px;color:var(--gold);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">📋 CONFIG yang perlu diubah</div>
+            <div style="font-family:monospace;font-size:13px;line-height:2;color:#eee">
+              <div><span style="color:#7EC8E3">namaAcara</span> : <span style="color:#98FB98" id="j-nama-acara">"—"</span></div>
+              <div><span style="color:#7EC8E3">tanggal</span>&nbsp;&nbsp; : <span style="color:#98FB98" id="j-tanggal">"—"</span></div>
+              <div><span style="color:#7EC8E3">waktu</span>&nbsp;&nbsp;&nbsp;&nbsp; : <span style="color:#98FB98" id="j-waktu">"—"</span></div>
+              <div><span style="color:#7EC8E3">tempat</span>&nbsp;&nbsp;&nbsp; : <span style="color:#98FB98" id="j-tempat">"—"</span></div>
+              <div style="color:var(--gold);font-weight:bold;margin-top:4px"><span style="color:#7EC8E3">expiredAt</span> : <span style="color:#FFD700" id="j-expired">"—"</span> <span style="color:#888;font-size:11px">← ubah ini!</span></div>
+            </div>
+          </div>
+
+          <div style="background:#FFF8E7;border:1.5px solid var(--gold);border-radius:14px;padding:16px;margin-bottom:20px">
+            <div style="font-size:12px;font-weight:700;color:var(--brown);margin-bottom:10px">📝 Langkah-langkah ganti jadwal:</div>
+            <ol style="font-size:13px;color:var(--dark);line-height:2;padding-left:18px">
+              <li>Buka file <code style="background:#eee;padding:1px 6px;border-radius:4px">index.html</code> dengan Notepad / VS Code</li>
+              <li>Cari bagian <code style="background:#eee;padding:1px 6px;border-radius:4px">KONFIGURASI</code></li>
+              <li>Ubah <strong>tanggal</strong>, <strong>waktu</strong>, <strong>tempat</strong>, dan <strong>expiredAt</strong></li>
+              <li>Simpan file</li>
+              <li>Buka <a href="https://netlify.com" target="_blank" style="color:var(--gold)">netlify.com</a> → login → pilih site Anda</li>
+              <li>Klik <strong>Deploys</strong> → drag & drop file baru → selesai!</li>
+            </ol>
+          </div>
+
+          <div style="background:#E8F5E9;border:1.5px solid var(--green);border-radius:14px;padding:16px;margin-bottom:20px">
+            <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">✅ Yang TIDAK perlu dilakukan:</div>
+            <ul style="font-size:13px;color:var(--dark);line-height:1.8;padding-left:18px">
+              <li>Tidak perlu hapus data di Supabase</li>
+              <li>Tidak perlu buat tabel baru</li>
+              <li>Tidak perlu ubah URL / API Key</li>
+              <li>Tidak perlu daftar ulang anggota</li>
+              <li>Data rekap tahunan tetap tersimpan otomatis</li>
+            </ul>
+          </div>
+
+          <div style="background:#FEF9E7;border:1.5px solid #F39C12;border-radius:14px;padding:16px">
+            <div style="font-size:12px;font-weight:700;color:#E67E22;margin-bottom:8px">⚠️ Contoh format expiredAt:</div>
+            <div style="font-family:monospace;font-size:13px;color:var(--dark);line-height:2">
+              Tutup 5 April 2026 jam 14.00 WIB:<br>
+              <code style="background:#eee;padding:2px 8px;border-radius:6px;color:var(--red)">"2026-04-05T14:00:00"</code><br><br>
+              Tutup 1 Mei 2026 jam 12.00 WIB:<br>
+              <code style="background:#eee;padding:2px 8px;border-radius:6px;color:var(--red)">"2026-05-01T12:00:00"</code>
+            </div>
+          </div>
+        </div>
+      </div>
+<script>
+// ╔══════════════════════════════════════════════════╗
+// ║         K O N F I G U R A S I                   ║
+// ╚══════════════════════════════════════════════════╝
+const CONFIG = {
+  namaAcara    : "Arisan Keluarga Besar",
+  tanggal      : "Sabtu, 1 Mei 2026",
+  waktu        : "09.00 WIB",
+  tempat       : "Rumah Pak Budi, Jl. Melati No. 12",
+  expiredAt    : "2026-05-01T14:00:00",
+  pesanPenutup : "Sampai Jumpa Bulan Depan! 👋",
+  pesanSub     : "Semoga silaturahmi kita terus terjaga.",
+  supabaseUrl  : "https://ojbpbgxyehsqbowemnyn.supabase.co",
+  supabaseKey  : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qYnBiZ3h5ZWhzcWJvd2VtbnluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MDY4MTksImV4cCI6MjA4NzQ4MjgxOX0.KR_4u6Ph3aFM-ZLqRRYztVlbgKNUi7mvrMOyb7k1U_U",
+  tabelAbsen   : "daftar_hadir",
+  tabelAnggota : "anggota",
+  nomorGrupWA  : "628123456789",
+  adminPassword: "admin123",
+};
+// ╚══════════════════════════════════════════════════╝
+
+const {createClient}=supabase;
+const db=createClient(CONFIG.supabaseUrl,CONFIG.supabaseKey);
+const expDate=new Date(CONFIG.expiredAt);
+let peserta=[],anggota=[],allAnggota=[],allAbsen=[],jumlah=1,pilihanAnggota=null;
+
+// ── ROUTING ──
+async function init(){
+  const isAdmin=location.search.includes('admin');
+  if(isAdmin){
+    document.getElementById('halaman-admin').style.display='block';
+    document.getElementById('adm-sub').textContent=CONFIG.namaAcara;
+    cekSesiAdmin(); // langsung masuk jika sesi masih aktif
+  } else if(new Date()>=expDate){
+    await muatExpired();
+    document.getElementById('halaman-expired').style.display='block';
+  } else {
+    await muatForm();
+    document.getElementById('halaman-form').style.display='block';
+    startCountdown();
+    subscribeRealtime();
+  }
+  document.getElementById('loading-screen').style.display='none';
+}
+
+// ══════ FORM ══════
+async function muatForm(){
+  document.getElementById('f-subtitle').textContent=CONFIG.namaAcara;
+  document.getElementById('f-acara').textContent=CONFIG.namaAcara;
+  document.getElementById('f-tanggal').textContent=CONFIG.tanggal;
+  document.getElementById('f-waktu').textContent=CONFIG.waktu;
+  document.getElementById('f-tempat').textContent=CONFIG.tempat;
+  document.getElementById('cd-tutup').textContent=expDate.toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  await Promise.all([loadAnggota(),loadAbsen()]);
+  const key='absen_'+CONFIG.namaAcara+'_'+CONFIG.tanggal;
+  const n=localStorage.getItem(key);
+  if(n){document.getElementById('form-card').style.display='none';document.getElementById('already-box').style.display='block';document.getElementById('already-msg').textContent=`"${n}" sudah tercatat hadir hari ini.`;updateWaButtons();}
+}
+
+function startCountdown(){
+  function tick(){
+    const d=expDate-new Date();
+    if(d<=0){location.reload();return;}
+    const h=Math.floor(d/3600000),m=Math.floor((d%3600000)/60000),s=Math.floor((d%60000)/1000);
+    document.getElementById('cd-time').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if(d<3600000)document.getElementById('countdown-bar').style.background='linear-gradient(135deg,#7D6608,#9A7D0A)';
+  }
+  tick();setInterval(tick,1000);
+}
+
+async function loadAnggota(){const{data}=await db.from(CONFIG.tabelAnggota).select('*').order('nama');anggota=data||[];}
+async function loadAbsen(){const{data}=await db.from(CONFIG.tabelAbsen).select('*').order('waktu',{ascending:true});peserta=data||[];renderList();updateWaButtons();}
+
+function subscribeRealtime(){
+  db.channel('rt').on('postgres_changes',{event:'INSERT',schema:'public',table:CONFIG.tabelAbsen},p=>{
+    peserta.push(p.new);renderList(p.new.nama);updateWaButtons();
+  }).subscribe();
+}
+
+// autocomplete
+const namaInput=document.getElementById('nama-input');
+const acList=document.getElementById('ac-list');
+namaInput.addEventListener('input',function(){
+  const q=this.value.trim().toLowerCase();
+  pilihanAnggota=null;
+  document.getElementById('hp-group').style.display='none';
+  document.getElementById('hp-display-group').style.display='none';
+  if(!q){acList.style.display='none';return;}
+  const cocok=anggota.filter(a=>a.nama.toLowerCase().includes(q));
+  const tepat=anggota.find(a=>a.nama.toLowerCase()===q);
+  let html=cocok.map(a=>`<div class="ac-item" onclick="pilihAnggota('${a.id}','${a.nama.replace(/'/g,"\\'")}','${(a.no_hp||'').replace(/'/g,"\\'")}')">
+    ${a.nama}<div class="ac-sub">${a.no_hp||'Belum ada nomor'}</div></div>`).join('');
+  if(!tepat)html+=`<div class="ac-new" onclick="pilihBaru()">➕ Daftarkan "<strong>${this.value.trim()}</strong>" sebagai anggota baru</div>`;
+  acList.innerHTML=html;acList.style.display='block';
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.autocomplete-wrap'))acList.style.display='none';});
+
+function pilihAnggota(id,nama,hp){
+  pilihanAnggota={id,nama,hp,isNew:false};
+  namaInput.value=nama;acList.style.display='none';
+  document.getElementById('hp-group').style.display='none';
+  if(hp){document.getElementById('hp-display-group').style.display='block';document.getElementById('hp-display').value=hp;}
+  else document.getElementById('hp-display-group').style.display='none';
+}
+
+function pilihBaru(){
+  pilihanAnggota={id:null,nama:namaInput.value.trim(),hp:'',isNew:true};
+  acList.style.display='none';
+  document.getElementById('hp-group').style.display='block';
+  document.getElementById('hp-display-group').style.display='none';
+  document.getElementById('hp-input').focus();
+}
+
+document.getElementById('hp-input').addEventListener('input',function(){this.value=this.value.replace(/\D/g,'');});
+function tambah(){jumlah=Math.min(jumlah+1,99);document.getElementById('counter-val').textContent=jumlah;}
+function kurang(){jumlah=Math.max(jumlah-1,1);document.getElementById('counter-val').textContent=jumlah;}
+
+async function submitAbsen(){
+  document.getElementById('err-nama').style.display='none';
+  document.getElementById('err-double').style.display='none';
+  document.getElementById('err-hp').style.display='none';
+  const nama=namaInput.value.trim();
+  if(!nama){document.getElementById('err-nama').style.display='block';return;}
+  if(!pilihanAnggota)pilihanAnggota={id:null,nama,hp:'',isNew:true};
+  const hp=pilihanAnggota.isNew?document.getElementById('hp-input').value.trim():(pilihanAnggota.hp||'');
+  if(pilihanAnggota.isNew&&hp&&hp.length<10){document.getElementById('err-hp').style.display='block';return;}
+  if(peserta.find(p=>p.nama.toLowerCase()===nama.toLowerCase())){document.getElementById('err-double').style.display='block';return;}
+  document.getElementById('btn-submit').disabled=true;
+  document.getElementById('btn-submit').textContent='Menyimpan...';
+
+  // Simpan anggota baru
+  if(pilihanAnggota.isNew){
+    const{data:na}=await db.from(CONFIG.tabelAnggota).insert({nama,no_hp:hp||null}).select().single();
+    if(na){anggota.push(na);pilihanAnggota.id=na.id;}
+  }
+
+  // Simpan absen
+  const{error}=await db.from(CONFIG.tabelAbsen).insert({
+    nama,no_hp:hp||null,jumlah,
+    nama_acara:CONFIG.namaAcara,tanggal_acara:CONFIG.tanggal,
+    anggota_id:pilihanAnggota.id||null
+  });
+  if(error){
+    if(error.code==='23505')document.getElementById('err-double').style.display='block';
+    else alert('Gagal: '+error.message);
+    document.getElementById('btn-submit').disabled=false;
+    document.getElementById('btn-submit').innerHTML='✓ &nbsp; Konfirmasi Hadir';
+    return;
+  }
+  localStorage.setItem('absen_'+CONFIG.namaAcara+'_'+CONFIG.tanggal,nama);
+  peserta.push({nama,no_hp:hp||null,jumlah,waktu:new Date().toISOString()});
+  renderList(nama);updateWaButtons(nama);
+  document.getElementById('form-content').style.display='none';
+  document.getElementById('success-msg').style.display='block';
+  document.getElementById('success-detail').textContent=`"${nama}" hadir membawa ${jumlah} orang. 🎊`;
+}
+
+function sensorHP(hp){if(!hp||hp.length<=6)return hp;return hp.slice(0,4)+'*'.repeat(Math.max(0,hp.length-7))+hp.slice(-3);}
+function linkWA(t){const n=CONFIG.nomorGrupWA;return n.startsWith('http')?n:`https://wa.me/${n}?text=${encodeURIComponent(t)}`;}
+function formatWA(hl=null){
+  const now=new Date(),jam=now.toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const s=[...peserta].sort((a,b)=>new Date(a.waktu)-new Date(b.waktu));
+  const tot=s.reduce((x,p)=>x+(p.jumlah||1),0);
+  const b=s.map((p,i)=>`${i+1}.${hl&&p.nama===hl?' 🆕':''} ${p.nama} | ${p.no_hp||'-'} | ${p.jumlah} org`).join('\n');
+  return `╔══════════════════════╗\n📋 *DAFTAR HADIR*\n${CONFIG.namaAcara}\n╚══════════════════════╝\n\n📅 ${CONFIG.tanggal}\n⏰ ${CONFIG.waktu}\n📍 ${CONFIG.tempat}\n\n*Yang Hadir:*\n${b||'(belum ada)'}\n\n━━━━━━━━━━━━━━━━━\n👥 *Total: ${tot} orang* (${s.length} peserta)\n━━━━━━━━━━━━━━━━━\n🕐 Update: ${jam}`;
+}
+function updateWaButtons(hl=null){const u=linkWA(formatWA(hl));['btn-wa-already','btn-wa-success'].forEach(id=>{const el=document.getElementById(id);if(el)el.href=u;});}
+function kirimWaList(){window.open(linkWA(formatWA()),'_blank');}
+
+function renderList(n=null){
+  const list=document.getElementById('attendee-list'),badge=document.getElementById('count-badge'),tot=document.getElementById('total-orang');
+  const s=[...peserta].sort((a,b)=>new Date(a.waktu)-new Date(b.waktu));
+  badge.textContent=s.length+' entri';tot.textContent=s.reduce((x,p)=>x+(p.jumlah||1),0)+' orang';
+  if(!s.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">🌿</div>Belum ada yang hadir</div>';return;}
+  list.innerHTML=s.map((p,i)=>{
+    const isN=n&&p.nama===n,tgl=p.waktu?new Date(p.waktu).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+    return `<div class="attendee-item${isN?' new-entry':''}">
+      <div class="attendee-avatar">${(p.nama||'?')[0].toUpperCase()}</div>
+      <div class="attendee-info"><div class="attendee-name">${i+1}. ${p.nama}${isN?' 🆕':''}</div><div class="attendee-meta">📱 ${sensorHP(p.no_hp)} · ⏱ ${tgl}</div></div>
+      <div class="attendee-right"><div class="attendee-jumlah">${p.jumlah}</div><div class="attendee-jumlah-label">orang</div></div>
+    </div>`;}).join('');
+}
+
+// ══════ EXPIRED ══════
+async function muatExpired(){
+  const st=document.getElementById('exp-stars');
+  for(let i=0;i<60;i++){const s=document.createElement('div');s.className='exp-star';const sz=Math.random()*4+1;s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${(Math.random()*3+2).toFixed(1)}s;--delay:${(Math.random()*3).toFixed(1)}s;`;st.appendChild(s);}
+  document.getElementById('e-nama-acara').textContent=CONFIG.namaAcara;
+  document.getElementById('e-tanggal').textContent=CONFIG.tanggal+' · '+CONFIG.tempat;
+  document.getElementById('e-waktu-tutup').textContent=expDate.toLocaleString('id-ID',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('e-pesan').textContent=CONFIG.pesanPenutup;
+  document.getElementById('e-pesan-sub').innerHTML=CONFIG.pesanSub;
+  const{data}=await db.from(CONFIG.tabelAbsen).select('*').order('waktu',{ascending:true});
+  const list=data||[],tot=list.reduce((s,p)=>s+p.jumlah,0);
+  document.getElementById('e-total-orang').textContent=tot;
+  document.getElementById('e-total-peserta').textContent=list.length;
+  document.getElementById('e-list').innerHTML=list.length?list.map((p,i)=>`<div class="exp-list-item"><div class="exp-list-no">${i+1}</div><div class="exp-list-nama">${p.nama}<br><span class="exp-list-sub">${p.no_hp||''}</span></div><div style="text-align:right"><div class="exp-list-jml">${p.jumlah}</div><div class="exp-list-jml-label">orang</div></div></div>`).join(''):'<div style="text-align:center;color:rgba(255,255,255,.3);padding:10px;font-size:13px">Belum ada data</div>';
+  const b=list.map((p,i)=>`${i+1}. ${p.nama} | ${p.no_hp||'-'} | ${p.jumlah} org`).join('\n');
+  document.getElementById('e-btn-wa').href=linkWA(`🔒 *KEGIATAN SELESAI*\n${CONFIG.namaAcara}\n\n📅 ${CONFIG.tanggal}\n📍 ${CONFIG.tempat}\n\n*Yang Hadir:*\n${b}\n\n━━━━━━━━━━━━━━━━━\n👥 *Total: ${tot} orang* (${list.length} peserta)\n━━━━━━━━━━━━━━━━━\n${CONFIG.pesanPenutup}`);
+}
+
+// ══════ ADMIN ══════
+function cekLogin(){
+  const p=document.getElementById('admin-pass-input').value;
+  if(p===CONFIG.adminPassword){
+    sessionStorage.setItem('admin_ok','1');
+    document.getElementById('admin-login').style.display='none';
+    document.getElementById('admin-dashboard').style.display='block';
+    muatDataAdmin();
+  } else {
+    document.getElementById('err-login').style.display='block';
+  }
+}
+function logout(){
+  sessionStorage.removeItem('admin_ok');
+  document.getElementById('admin-login').style.display='block';
+  document.getElementById('admin-dashboard').style.display='none';
+  document.getElementById('admin-pass-input').value='';
+}
+function cekSesiAdmin(){
+  if(sessionStorage.getItem('admin_ok')==='1'){
+    document.getElementById('admin-login').style.display='none';
+    document.getElementById('admin-dashboard').style.display='block';
+    muatDataAdmin();
+  }
+}
+
+async function muatDataAdmin(){
+  const[r1,r2]=await Promise.all([
+    db.from(CONFIG.tabelAnggota).select('*').order('nama'),
+    db.from(CONFIG.tabelAbsen).select('*').order('waktu',{ascending:false})
+  ]);
+  allAnggota=r1.data||[];allAbsen=r2.data||[];
+  renderAnggota(allAnggota);muatStats();isiTahunSel();muatRekap();muatRiwayat();
+}
+
+function muatStats(){
+  const now=new Date(),bln=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`,thn=now.getFullYear();
+  document.getElementById('stat-anggota').textContent=allAnggota.length;
+  document.getElementById('stat-bln').textContent=allAbsen.filter(a=>a.waktu&&a.waktu.startsWith(bln)).length;
+  document.getElementById('stat-thn').textContent=allAbsen.filter(a=>a.waktu&&a.waktu.startsWith(thn)).length;
+}
+
+function renderAnggota(list){
+  const tbody=document.getElementById('member-tbody');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#CCC;padding:20px">Belum ada anggota</td></tr>';return;}
+  tbody.innerHTML=list.map((a,i)=>{
+    const tot=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama).length;
+    const tgl=a.created_at?new Date(a.created_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
+    return `<tr><td style="color:#AAA;font-size:12px">${i+1}</td><td><strong>${a.nama}</strong></td><td style="color:#888;font-size:13px">${a.no_hp||'—'}</td><td style="color:#AAA;font-size:12px">${tgl}</td><td><span class="total-chip">${tot}x</span></td><td><button class="btn-sm btn-red" onclick="hapusAnggota('${a.id}','${a.nama.replace(/'/g,"\\'")}')" style="padding:5px 10px;font-size:12px">Hapus</button></td></tr>`;
+  }).join('');
+}
+
+function filterAnggota(){const q=document.getElementById('search-anggota').value.toLowerCase();renderAnggota(allAnggota.filter(a=>a.nama.toLowerCase().includes(q)||(a.no_hp||'').includes(q)));}
+
+async function tambahAnggota(){
+  const nama=document.getElementById('add-nama').value.trim();
+  const hp=document.getElementById('add-hp').value.trim();
+  const msg=document.getElementById('add-msg');
+  msg.style.color='var(--red)';
+  if(!nama){msg.style.display='inline';msg.textContent='❌ Nama tidak boleh kosong';return;}
+
+  // Cek duplikat nama (case-insensitive)
+  const samaNama=allAnggota.find(a=>a.nama.toLowerCase()===nama.toLowerCase());
+  if(samaNama){
+    msg.textContent=`❌ Nama "${nama}" sudah ada di daftar anggota`;
+    return;
+  }
+
+  // Cek duplikat nomor HP
+  if(hp){
+    const samaHP=allAnggota.find(a=>a.no_hp&&a.no_hp===hp);
+    if(samaHP){
+      msg.textContent=`❌ Nomor HP ${hp} sudah terdaftar atas nama "${samaHP.nama}"`;
+      return;
+    }
+  }
+
+  const{data,error}=await db.from(CONFIG.tabelAnggota).insert({nama,no_hp:hp||null}).select().single();
+  if(error){msg.textContent='❌ Gagal simpan: '+error.message;return;}
+  allAnggota.push(data);allAnggota.sort((a,b)=>a.nama.localeCompare(b.nama));
+  renderAnggota(allAnggota);muatStats();
+  document.getElementById('add-nama').value='';document.getElementById('add-hp').value='';
+  msg.style.color='var(--green)';
+  msg.textContent=`✓ "${nama}" berhasil ditambahkan!`;
+  setTimeout(()=>{msg.textContent='';},3000);
+}
+
+async function hapusAnggota(id,nama){
+  if(!confirm(`Hapus "${nama}"?\nRiwayat absensi tetap tersimpan.`))return;
+  await db.from(CONFIG.tabelAnggota).delete().eq('id',id);
+  allAnggota=allAnggota.filter(a=>a.id!==id);renderAnggota(allAnggota);muatStats();
+}
+
+function isiTahunSel(){
+  const sel=document.getElementById('tahun-sel'),now=new Date().getFullYear();
+  const ada=[...new Set(allAbsen.map(a=>a.waktu?new Date(a.waktu).getFullYear():null).filter(Boolean))];
+  const list=[...new Set([...ada,now])].sort((a,b)=>b-a);
+  sel.innerHTML=list.map(t=>`<option value="${t}">${t}</option>`).join('');
+}
+
+function muatRekap(){
+  const tahun=parseInt(document.getElementById('tahun-sel').value)||new Date().getFullYear();
+  const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+  const absenThn=allAbsen.filter(a=>a.waktu&&new Date(a.waktu).getFullYear()===tahun);
+  const bulanAda=[...new Set(absenThn.map(a=>new Date(a.waktu).getMonth()))].sort((a,b)=>a-b);
+  document.getElementById('rekap-thead').innerHTML=`<tr><th class="nama-col">Nama Anggota</th>${bulanAda.map(b=>`<th>${BLN[b]}</th>`).join('')}<th>Total</th></tr>`;
+  const tbody=document.getElementById('rekap-tbody');
+  if(!allAnggota.length){tbody.innerHTML='<tr><td colspan="20" style="text-align:center;color:#AAA;padding:20px">Belum ada anggota</td></tr>';return;}
+  tbody.innerHTML=allAnggota.map(a=>{
+    let tot=0;
+    const cols=bulanAda.map(b=>{
+      const h=absenThn.some(ab=>(ab.anggota_id===a.id||ab.nama===a.nama)&&new Date(ab.waktu).getMonth()===b);
+      if(h)tot++;
+      return h?`<td><div class="hadir-dot">✓</div></td>`:`<td><div class="tidak-dot">—</div></td>`;
+    }).join('');
+    return `<tr><td class="nama-col">${a.nama}<br><span style="font-size:11px;color:#AAA;font-weight:normal">${a.no_hp||''}</span></td>${cols}<td><span class="total-chip">${tot}/${bulanAda.length}</span></td></tr>`;
+  }).join('');
+}
+
+async function eksporRekapWA(){
+  const tahun=document.getElementById('tahun-sel').value;
+  const BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+  const absenThn=allAbsen.filter(a=>a.waktu&&new Date(a.waktu).getFullYear()===parseInt(tahun));
+  const bulanAda=[...new Set(absenThn.map(a=>new Date(a.waktu).getMonth()))].sort((a,b)=>a-b);
+  let teks=`📊 *REKAP KEHADIRAN ${tahun}*\n${CONFIG.namaAcara}\n\n`;
+  allAnggota.forEach((a,i)=>{
+    let tot=0;
+    const dots=bulanAda.map(b=>{const h=absenThn.some(ab=>(ab.anggota_id===a.id||ab.nama===a.nama)&&new Date(ab.waktu).getMonth()===b);if(h)tot++;return h?'✅':'❌';}).join(' ');
+    teks+=`${i+1}. *${a.nama}*\n   ${bulanAda.map(b=>BLN[b]).join('  ')}\n   ${dots}\n   Hadir: ${tot}/${bulanAda.length}x\n\n`;
+  });
+  teks+=`━━━━━━━━━━━━━━━━━\nTotal anggota: ${allAnggota.length}\n${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`;
+  window.open(linkWA(teks),'_blank');
+}
+
+function muatRiwayat(){
+  const f=document.getElementById('filter-bulan').value;
+  let data=[...allAbsen];
+  if(f)data=data.filter(a=>a.waktu&&a.waktu.startsWith(f));
+  const tbody=document.getElementById('riwayat-tbody');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#CCC;padding:20px">Tidak ada data</td></tr>';return;}
+  tbody.innerHTML=data.map((a,i)=>{
+    const tgl=a.waktu?new Date(a.waktu).toLocaleString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+    return `<tr><td style="color:#AAA;font-size:12px">${i+1}</td><td><strong>${a.nama}</strong></td><td style="color:#888;font-size:13px">${a.no_hp||'—'}</td><td style="text-align:center"><span class="total-chip">${a.jumlah} org</span></td><td style="color:#888;font-size:12px">${tgl}</td><td style="color:#AAA;font-size:12px">${a.nama_acara||'—'}</td></tr>`;
+  }).join('');
+}
+
+function gotoTab(tab){
+  ['anggota','rekap','riwayat','jadwal'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+  document.querySelectorAll('.admin-tab').forEach((btn,i)=>btn.classList.toggle('active',['anggota','rekap','riwayat','jadwal'][i]===tab));
+  if(tab==='jadwal') isiJadwal();
+}
+
+function isiJadwal(){
+  document.getElementById('j-nama-acara').textContent=`"${CONFIG.namaAcara}"`;
+  document.getElementById('j-tanggal').textContent=`"${CONFIG.tanggal}"`;
+  document.getElementById('j-waktu').textContent=`"${CONFIG.waktu}"`;
+  document.getElementById('j-tempat').textContent=`"${CONFIG.tempat}"`;
+  document.getElementById('j-expired').textContent=`"${CONFIG.expiredAt}"`;
+}
+
+init();
+</script>
+</body>
+</html>
