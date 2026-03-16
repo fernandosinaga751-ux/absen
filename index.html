@@ -240,6 +240,7 @@ table.data-tbl td.center{text-align:center;}
       <button class="nav-item" onclick="gotoTab('rekap')" id="nav-rekap"><span class="nav-icon">📊</span>Rekap Kehadiran</button>
       <button class="nav-item" onclick="gotoTab('riwayat')" id="nav-riwayat"><span class="nav-icon">📋</span>Riwayat</button>
       <button class="nav-item" onclick="gotoTab('jadwal')" id="nav-jadwal"><span class="nav-icon">📅</span>Jadwal Partonggoan</button>
+      <button class="nav-item" onclick="gotoTab('pengurus')" id="nav-pengurus"><span class="nav-icon">🏛️</span>Pengurus</button>
     </div>
     <div class="sidebar-footer">
       <button class="logout-btn" onclick="doLogout()">🚪 Keluar</button>
@@ -389,6 +390,29 @@ table.data-tbl td.center{text-align:center;}
           </div>
         </div>
         <div id="jadwal-list"></div>
+      </div>
+
+      <!-- ══════ TAB PENGURUS ══════ -->
+      <div id="tab-pengurus" style="display:none" class="fade-in">
+        <div class="section-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+            <h3 style="margin:0;padding:0;border:none">🏛️ Daftar Pengurus</h3>
+            <button class="btn-sm btn-sm-pdf" onclick="printDaftarPengurus()">🖨️ Print PDF</button>
+          </div>
+          <div style="font-size:12px;color:#888;margin-bottom:16px;font-style:italic">Tumpuan Sumbayak Boru Pakon Panogolan — Medan Timur Sekitarnya</div>
+          <div style="background:linear-gradient(135deg,var(--dark),#6B3F2A);border-radius:12px;padding:16px 20px;margin-bottom:16px;color:white;text-align:center">
+            <div style="font-size:10px;opacity:.6;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Struktur Organisasi</div>
+            <div style="font-family:'Playfair Display',serif;font-size:18px;color:var(--gold)">Pengurus Tumpuan Sumbayak</div>
+            <div style="font-family:'Playfair Display',serif;font-size:13px;opacity:.7;margin-top:2px">Boru Pakon Panogolan — Medan Timur Sekitarnya</div>
+          </div>
+          <div id="pengurus-list"></div>
+          <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--gold-light)">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--brown);margin-bottom:12px">✏️ Edit Pengurus</div>
+            <div id="pengurus-form"></div>
+            <button class="btn-primary" onclick="simpanPengurus()" style="margin-top:10px">💾 Simpan Perubahan</button>
+            <span id="pengurus-msg" style="font-size:12px;margin-left:10px"></span>
+          </div>
+        </div>
       </div>
 
     </div><!-- /admin-content -->
@@ -622,9 +646,9 @@ async function loadAllData(){
 }
 
 // ═══ TAB NAV ═══
-const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan'};
+const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus'};
 function gotoTab(t){
-  ['anggota','rekap','riwayat','jadwal'].forEach(x=>{
+  ['anggota','rekap','riwayat','jadwal','pengurus'].forEach(x=>{
     document.getElementById('tab-'+x).style.display=x===t?'block':'none';
     document.getElementById('nav-'+x).classList.toggle('active',x===t);
   });
@@ -632,6 +656,7 @@ function gotoTab(t){
   if(t==='rekap')muatRekap();
   if(t==='riwayat')muatRiwayat();
   if(t==='jadwal')renderJadwal();
+  if(t==='pengurus')renderPengurus();
 }
 
 // ═══ STATS ═══
@@ -1037,7 +1062,7 @@ function eksporJadwalPDF(){
   doc.setFont('helvetica','bold');
   doc.setTextColor(196,154,74);
   doc.setFontSize(7);
-  doc.text('TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN',PW/2,MY+8,{align:'center'});
+  doc.text('PERSEKUTUAN KELUARGA SUMBAYAK',PW/2,MY+8,{align:'center'});
   doc.setFontSize(19);
   doc.text('JADWAL PARTONGGOAN SUMBAYAK',PW/2,MY+20,{align:'center'});
   doc.setFont('helvetica','normal');
@@ -1140,13 +1165,64 @@ function eksporJadwalPDF(){
     didDrawCell:(data)=>{},
   });
 
-  // ── FOOTER ──
-  const fy=doc.lastAutoTable.finalY+5;
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.5);doc.line(MX,fy,PW-MX,fy);
-  doc.setFont('helvetica','italic');doc.setFontSize(7.5);doc.setTextColor(160,130,100);
-  doc.text('"Saling mengasihi dan berbagi kasih dalam persekutuan keluarga"',PW/2,fy+4,{align:'center'});
-  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(180,155,120);
-  doc.text(CFG.namaAcara+'   \u00b7   Tahun '+tahun+'   \u00b7   Dicetak: '+tglCetak,PW/2,fy+8,{align:'center'});
+  // ── DAFTAR PENGURUS ──
+  let fy=doc.lastAutoTable.finalY+8;
+  const pengurusList=muatDataPengurus();
+  const spaceNeeded=14+pengurusList.length*8+40;
+  if((PH-fy-20)<spaceNeeded){doc.addPage();fy=14;}
+
+  // Sub-header pengurus
+  doc.setFillColor(249,245,238);doc.rect(MX,fy,CW,8,'F');
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.rect(MX,fy,CW,8,'S');
+  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(61,43,31);
+  doc.text('DAFTAR PENGURUS TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN',PW/2,fy+5.5,{align:'center'});
+  fy+=10;
+
+  // Tabel pengurus
+  doc.autoTable({
+    startY:fy,
+    margin:{left:MX,right:MX},
+    tableWidth:CW,
+    head:[[{content:'No',styles:{halign:'center'}},{content:'Jabatan'},{content:'Nama'}]],
+    body:pengurusList.map((p,i)=>[
+      {content:String(i+1),styles:{halign:'center',textColor:[139,94,60],fontStyle:'bold'}},
+      {content:p.jabatan,styles:{fontStyle:'bold'}},
+      {content:p.nama},
+    ]),
+    columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:52},2:{cellWidth:CW-62}},
+    headStyles:{fillColor:[61,43,31],textColor:[196,154,74],fontSize:7.5,fontStyle:'bold',cellPadding:3},
+    bodyStyles:{fontSize:8,cellPadding:3,textColor:[50,32,20]},
+    alternateRowStyles:{fillColor:[251,247,238]},
+    theme:'grid',
+  });
+  fy=doc.lastAutoTable.finalY+12;
+
+  // TTD Ketua & Sekretaris
+  const ttdArr=pengurusList.filter(p=>p.ttd).slice(0,2);
+  if(ttdArr.length>0){
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,70,40);
+    doc.text('Ditetapkan di Medan, '+tglCetak,MX,fy);
+    fy+=12;
+    const ttdW=CW/ttdArr.length;
+    ttdArr.forEach((p,i)=>{
+      const bx=MX+i*ttdW;
+      doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(100,70,40);
+      doc.text(p.jabatan,bx+ttdW/2,fy,{align:'center'});
+      const lineY=fy+24;
+      doc.setDrawColor(61,43,31);doc.setLineWidth(0.6);
+      doc.line(bx+ttdW*0.12,lineY,bx+ttdW*0.88,lineY);
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(50,32,20);
+      doc.text(p.nama,bx+ttdW/2,lineY+5,{align:'center'});
+    });
+    fy+=36;
+  }
+
+  // ── GARIS FOOTER ──
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.4);doc.line(MX,fy,PW-MX,fy);fy+=4;
+  doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(160,130,100);
+  doc.text('"Saling mengasihi dan berbagi kasih dalam persekutuan keluarga"',PW/2,fy,{align:'center'});fy+=4;
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(180,155,120);
+  doc.text(CFG.namaAcara+' · Tahun '+tahun+' · Dicetak: '+tglCetak,PW/2,fy,{align:'center'});
 
   doc.save('Jadwal_Partonggoan_Sumbayak_'+tahun+'.pdf');
   showToast('✅ PDF Jadwal berhasil diunduh!');
@@ -1594,7 +1670,7 @@ function printTTDKehadiran(){
   doc.rect(MX,MY+34-2,CW,2,'F');
   [5,10,15].forEach(d=>{doc.setFillColor(196,154,74);doc.circle(MX+d,MY+18,0.8,'F');doc.circle(MX+CW-d,MY+18,0.8,'F');});
   doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(196,154,74);
-  doc.text('TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN',PW/2,MY+7,{align:'center'});
+  doc.text('PERSEKUTUAN KELUARGA SUMBAYAK',PW/2,MY+7,{align:'center'});
   doc.setFontSize(15);doc.text('DAFTAR TANDA TANGAN KEHADIRAN',PW/2,MY+17,{align:'center'});
   doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(220,205,180);
   doc.text(CFG.namaAcara,PW/2,MY+24,{align:'center'});
@@ -1623,7 +1699,7 @@ function printTTDKehadiran(){
       {content:a.nama,styles:{fontStyle:'bold',fontSize:7}},
       {content:a.alamat||'—',styles:{fontSize:6.5,textColor:[100,80,60]}},
       {content:tot+'x',styles:{halign:'center',fontStyle:'bold',fontSize:7,textColor:[90,122,92]}},
-      {content:'',styles:{minCellHeight:11}},
+      {content:'',styles:{minCellHeight:16}},
     ];
   });
 
@@ -1656,7 +1732,7 @@ function printTTDKehadiran(){
       fontSize:7,textColor:[50,32,20],
       cellPadding:{top:2,bottom:2,left:2,right:2},
       lineColor:[210,200,185],lineWidth:0.15,
-      minCellHeight:11,
+      minCellHeight:16,
       valign:'middle',
     },
     alternateRowStyles:{fillColor:[251,247,238]},
@@ -1735,6 +1811,140 @@ Hapus ${totalRec} data absensi tahun ${tahun}?`))return;
   // Panduan SQL di console
   const sqlHint=jt.map(j=>`-- P${j.nomor}: DELETE FROM daftar_hadir WHERE tanggal_acara = '${j.tanggal}';`).join('\n');
   console.log('SQL setara:\n'+sqlHint);
+}
+
+// ═══ PENGURUS ═══
+// Data default pengurus (bisa diedit)
+const PENGURUS_DEFAULT = [
+  {jabatan:'Ketua',        nama:'St. Salmek Sumbayak, SH., MH',      ttd:true},
+  {jabatan:'Wakil Ketua',  nama:'St. Jhon Ray Sumbayak, SE.',          ttd:false},
+  {jabatan:'Sekretaris',   nama:'Roni Linga',                          ttd:true},
+  {jabatan:'Wakil Sekretaris',nama:'Richard Fernando Sinaga',          ttd:false},
+  {jabatan:'Bendahara',    nama:'St. Meriana Elpe br. Saragih, Msn.', ttd:false},
+];
+
+// Muat dari localStorage atau gunakan default
+function muatDataPengurus(){
+  try{
+    const saved=localStorage.getItem('pengurus_tsbp');
+    return saved?JSON.parse(saved):JSON.parse(JSON.stringify(PENGURUS_DEFAULT));
+  }catch(e){return JSON.parse(JSON.stringify(PENGURUS_DEFAULT));}
+}
+function simpanDataPengurus(data){
+  localStorage.setItem('pengurus_tsbp',JSON.stringify(data));
+}
+
+function renderPengurus(){
+  const data=muatDataPengurus();
+  // Tampilan kartu
+  document.getElementById('pengurus-list').innerHTML=data.map((p,i)=>`
+    <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#F8F9FC;border-radius:10px;margin-bottom:8px;border-left:3px solid var(--gold)">
+      <div style="min-width:160px">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--brown)">${p.jabatan}</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:var(--dark)">${p.nama}</div>
+      </div>
+      ${p.ttd?'<span style="background:var(--green-light);color:var(--green);font-size:10px;font-weight:700;padding:2px 9px;border-radius:6px">✓ TTD</span>':''}
+    </div>`).join('');
+  // Form edit
+  document.getElementById('pengurus-form').innerHTML=data.map((p,i)=>`
+    <div class="form-grid-2" style="margin-bottom:8px">
+      <div class="field" style="margin:0">
+        <label>${p.jabatan}</label>
+        <input type="text" id="pg-nama-${i}" value="${p.nama.replace(/"/g,'&quot;')}" placeholder="${p.jabatan}..."/>
+      </div>
+      <div class="field" style="margin:0;justify-content:flex-end;padding-top:22px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;font-weight:700;color:var(--brown)">
+          <input type="checkbox" id="pg-ttd-${i}" ${p.ttd?'checked':''} style="width:15px;height:15px;accent-color:var(--green)"/>
+          Tandatangan di PDF
+        </label>
+      </div>
+    </div>`).join('');
+}
+
+function simpanPengurus(){
+  const data=muatDataPengurus();
+  data.forEach((p,i)=>{
+    const inp=document.getElementById('pg-nama-'+i);
+    const chk=document.getElementById('pg-ttd-'+i);
+    if(inp)p.nama=inp.value.trim()||p.nama;
+    if(chk)p.ttd=chk.checked;
+  });
+  simpanDataPengurus(data);
+  renderPengurus();
+  const msg=document.getElementById('pengurus-msg');
+  msg.style.color='var(--green)';msg.textContent='✓ Tersimpan!';
+  setTimeout(()=>msg.textContent='',2500);
+}
+
+// Print PDF daftar pengurus
+function printDaftarPengurus(){
+  const{jsPDF}=window.jspdf;
+  const PW=210, PH=297;
+  const doc=new jsPDF({orientation:'portrait',format:'a4',unit:'mm'});
+  const MX=18, CW=PW-MX*2;
+  const data=muatDataPengurus();
+  const tglCetak=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+
+  // Header
+  doc.setFillColor(61,43,31);doc.rect(MX,14,CW,46,'F');
+  doc.setFillColor(196,154,74);doc.rect(MX,14,CW,2.5,'F');doc.rect(MX,58,CW,2,'F');
+  [6,12,18].forEach(d=>{doc.setFillColor(196,154,74);doc.circle(MX+d,37,0.9,'F');doc.circle(MX+CW-d,37,0.9,'F');});
+  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(196,154,74);
+  doc.text('PERSEKUTUAN KELUARGA',PW/2,22,{align:'center'});
+  doc.setFontSize(16);doc.text('TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN',PW/2,32,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(220,205,180);
+  doc.text('Medan Timur Sekitarnya',PW/2,40,{align:'center'});
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(196,154,74);
+  doc.text('DAFTAR PENGURUS',PW/2,52,{align:'center'});
+
+  let y=66;
+  // Tabel pengurus
+  doc.autoTable({
+    startY:y,
+    margin:{left:MX,right:MX},
+    tableWidth:CW,
+    head:[[{content:'No',styles:{halign:'center'}},{content:'Jabatan'},{content:'Nama'}]],
+    body:data.map((p,i)=>[
+      {content:String(i+1),styles:{halign:'center',fontStyle:'bold',textColor:[139,94,60]}},
+      {content:p.jabatan,styles:{fontStyle:'bold'}},
+      {content:p.nama},
+    ]),
+    columnStyles:{0:{cellWidth:14,halign:'center'},1:{cellWidth:60},2:{cellWidth:CW-14-60}},
+    headStyles:{fillColor:[61,43,31],textColor:[196,154,74],fontSize:9,fontStyle:'bold',cellPadding:4},
+    bodyStyles:{fontSize:10,cellPadding:5,textColor:[50,32,20]},
+    alternateRowStyles:{fillColor:[251,247,238]},
+    theme:'grid',
+  });
+
+  y=doc.lastAutoTable.finalY+16;
+
+  // TTD Ketua & Sekretaris
+  const ttdPengurus=data.filter(p=>p.ttd).slice(0,2);
+  if(ttdPengurus.length>0){
+    doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.line(MX,y,PW-MX,y);y+=6;
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(139,94,60);
+    doc.text('Ditetapkan di Medan, '+tglCetak,MX,y);
+    y+=10;
+    const ttdW=CW/ttdPengurus.length;
+    ttdPengurus.forEach((p,i)=>{
+      const bx=MX+i*ttdW;
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,70,40);
+      doc.text(p.jabatan,bx+ttdW/2,y,{align:'center'});
+      // Garis TTD
+      const lineY=y+22;
+      doc.setDrawColor(61,43,31);doc.setLineWidth(0.5);
+      doc.line(bx+ttdW*0.15,lineY,bx+ttdW*0.85,lineY);
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(50,32,20);
+      doc.text(p.nama,bx+ttdW/2,lineY+5,{align:'center'});
+      // Nomor di bawah nama (dekorasi)
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(150,120,80);
+    });
+  }
+
+  doc.save('Daftar_Pengurus_TSBP.pdf');
+  showToast('✅ PDF Pengurus berhasil diunduh!');
 }
 
 function eksporRekapWA(){
