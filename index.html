@@ -644,29 +644,54 @@ async function tambahAnggota(){
   if(!nama){msg.textContent='❌ Nama wajib diisi';return;}
   if(allAnggota.find(a=>a.nama.toLowerCase()===nama.toLowerCase())){msg.textContent=`❌ "${nama}" sudah ada`;return;}
   const urutan=(allAnggota.length>0?Math.max(...allAnggota.map(a=>a.urutan||0)):0)+1;
-  const obj={nama,no_hp:hp||null,urutan};if(alamat)obj.alamat=alamat;
+  const obj={nama,no_hp:hp||null,urutan};
+  if(alamat && !_noAlamat) obj.alamat=alamat;
+  // Simpan alamat lokal untuk tampilan meski kolom tidak ada di DB
+  const alamatLokal=alamat;
   const{data,error}=await safeInsertAnggota(obj,nama,hp,urutan);
   if(error){msg.textContent='❌ '+error.message;return;}
-  if(data){allAnggota.push(data);allAnggota.sort((a,b)=>(a.urutan||999)-(b.urutan||999));}
+  if(data){
+    // Jika DB tidak simpan alamat, simpan di objek lokal
+    if(alamatLokal && !data.alamat) data.alamat=alamatLokal;
+    allAnggota.push(data);allAnggota.sort((a,b)=>(a.urutan||999)-(b.urutan||999));
+  }
   renderAnggota(allAnggota);muatStats();
   document.getElementById('add-nama').value='';document.getElementById('add-alamat').value='';document.getElementById('add-hp').value='';
   msg.style.color='var(--green)';msg.textContent=`✓ "${nama}" ditambahkan!`;setTimeout(()=>msg.textContent='',3000);
 }
 
-// Fallback: jika kolom alamat/urutan tidak ada, coba tanpa
+// Fallback: jika kolom alamat/urutan tidak ada di DB, coba tanpa kolom tersebut
+let _noAlamat=false, _noUrutan=false;
 async function safeInsertAnggota(obj,nama,hp,urutan){
-  let{data,error}=await db.from(CFG.tabelAnggota).insert(obj).select().single();
-  if(error&&error.message){
-    const msg=error.message.toLowerCase();
-    if(msg.includes('alamat')&&msg.includes('column')){
-      const obj2={nama,no_hp:hp||null};if(urutan)obj2.urutan=urutan;
-      ({data,error}=await db.from(CFG.tabelAnggota).insert(obj2).select().single());
-    }
-    if(error&&error.message&&error.message.toLowerCase().includes('urutan')&&error.message.toLowerCase().includes('column')){
-      ({data,error}=await db.from(CFG.tabelAnggota).insert({nama,no_hp:hp||null}).select().single());
-    }
+  // Jika sudah diketahui kolom tidak ada, bersihkan obj dari awal
+  const cleanObj={nama,no_hp:hp||null};
+  if(!_noAlamat && obj.alamat) cleanObj.alamat=obj.alamat;
+  if(!_noUrutan && urutan)     cleanObj.urutan=urutan;
+
+  let{data,error}=await db.from(CFG.tabelAnggota).insert(cleanObj).select().single();
+  if(!error) return{data,error};
+
+  const em=(error.message||'').toLowerCase();
+
+  // Error kolom alamat
+  if(em.includes('alamat')){
+    _noAlamat=true;
+    delete cleanObj.alamat;
+    ({data,error}=await db.from(CFG.tabelAnggota).insert(cleanObj).select().single());
+    if(!error) return{data,error};
   }
-  return {data,error};
+
+  // Error kolom urutan
+  if((error.message||'').toLowerCase().includes('urutan')){
+    _noUrutan=true;
+    delete cleanObj.urutan;
+    ({data,error}=await db.from(CFG.tabelAnggota).insert(cleanObj).select().single());
+    if(!error) return{data,error};
+  }
+
+  // Fallback absolut: hanya nama + no_hp
+  ({data,error}=await db.from(CFG.tabelAnggota).insert({nama,no_hp:hp||null}).select().single());
+  return{data,error};
 }
 
 async function hapusAnggota(id,nama){
@@ -691,16 +716,31 @@ async function simpanEditAnggota(){
   const alamat=document.getElementById('mea-alamat').value.trim();
   const hp=document.getElementById('mea-hp').value.trim();
   if(!nama){showToast('❌ Nama tidak boleh kosong');return;}
-  // Cek duplikat nama (selain diri sendiri)
   if(allAnggota.find(a=>a.id!==id&&a.nama.toLowerCase()===nama.toLowerCase())){showToast(`❌ Nama "${nama}" sudah ada`);return;}
-  const upd={nama,no_hp:hp||null};if(alamat)upd.alamat=alamat;
-  // update juga di tabel absen jika nama berubah
+
+  // Bangun objek update — hindari kolom yang tidak ada di DB
+  const upd={nama,no_hp:hp||null};
+  if(alamat && !_noAlamat) upd.alamat=alamat;
+
   const oldNama=allAnggota[idx].nama;
-  const{data,error}=await db.from(CFG.tabelAnggota).update(upd).eq('id',id).select().single();
+
+  let{data,error}=await db.from(CFG.tabelAnggota).update(upd).eq('id',id).select().single();
+
+  // Jika error karena kolom alamat tidak ada, coba tanpa
+  if(error && (error.message||'').toLowerCase().includes('alamat')){
+    _noAlamat=true;
+    delete upd.alamat;
+    ({data,error}=await db.from(CFG.tabelAnggota).update(upd).eq('id',id).select().single());
+  }
+
   if(error){showToast('❌ Gagal: '+error.message);return;}
-  // Update nama di allAbsen lokal
-  if(oldNama!==nama)allAbsen.forEach(ab=>{if(ab.nama===oldNama)ab.nama=nama;});
-  allAnggota[idx]={...allAnggota[idx],...data};
+
+  // Simpan alamat di objek lokal meski tidak ada di DB
+  const localUpdate={...allAnggota[idx],...data};
+  if(alamat) localUpdate.alamat=alamat;
+
+  if(oldNama!==nama) allAbsen.forEach(ab=>{if(ab.nama===oldNama)ab.nama=nama;});
+  allAnggota[idx]=localUpdate;
   closeModal('m-edit-anggota');renderAnggota(allAnggota);showToast('✅ Data anggota diperbarui!');
 }
 
@@ -772,9 +812,13 @@ async function prosesImport(){
   for(let i=0;i<baru.length;i++){
     const r=baru[i];
     const obj={nama:r.nama,no_hp:r.no_hp||null,urutan:nextUrutan};
-    if(r.alamat)obj.alamat=r.alamat;
+    if(r.alamat && !_noAlamat) obj.alamat=r.alamat;
     const{data,error}=await safeInsertAnggota(obj,r.nama,r.no_hp,nextUrutan);
-    if(data){allAnggota.push(data);berhasil++;nextUrutan++;}
+    if(data){
+      // Simpan alamat lokal meski DB tidak punya kolom
+      if(r.alamat && !data.alamat) data.alamat=r.alamat;
+      allAnggota.push(data);berhasil++;nextUrutan++;
+    }
     document.getElementById('import-bar').style.width=Math.round(((i+1)/baru.length)*100)+'%';
     document.getElementById('import-status').textContent=`Mengimpor... ${i+1}/${baru.length}`;
   }
@@ -889,133 +933,150 @@ function renderJadwal(){
 }
 
 // ═══════════════════════════════
-// EXPORT JADWAL PDF — Tampil profesional seperti Word, tanpa Siboan Doding & Tonggo
+// EXPORT JADWAL PDF — F4 Landscape (330×233mm), profesional
 // ═══════════════════════════════
 function eksporJadwalPDF(){
   const{jsPDF}=window.jspdf;
-  const doc=new jsPDF({orientation:'portrait',format:'a4',unit:'mm'});
-  const pw=210,margin=18,cw=pw-margin*2;
+  // Ukuran F4 landscape: 330 x 233 mm
+  const PW=330, PH=233;
+  const doc=new jsPDF({orientation:'landscape',format:[PW,PH],unit:'mm'});
+  const MX=12, MY=8;
+  const CW=PW-MX*2; // 306 mm
   const tahun=new Date().getFullYear();
   const sorted=[...jadwalList].sort((a,b)=>a.nomor-b.nomor);
+  const terlaksana=sorted.filter(j=>allAbsen.some(ab=>ab.tanggal_acara===j.tanggal)).length;
+  const tglCetak=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
 
-  // ── Cover header block ──
-  // Kotak header gelap
+  // ── HEADER ──
+  const HDR_H=44;
   doc.setFillColor(61,43,31);
-  doc.roundedRect(margin,10,cw,38,3,3,'F');
-  // Garis emas atas
+  doc.rect(MX,MY,CW,HDR_H,'F');
+  // Garis emas atas & bawah header
   doc.setFillColor(196,154,74);
-  doc.rect(margin,10,cw,2,'F');
-  doc.rect(margin,46,cw,2,'F');
-
-  doc.setTextColor(196,154,74);
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(7);
-  doc.text('PERSEKUTUAN KELUARGA SUMBAYAK', pw/2, 17, {align:'center'});
-  doc.setFontSize(15);
-  doc.text('JADWAL PARTONGGOAN SUMBAYAK', pw/2, 26, {align:'center'});
-  doc.setFontSize(10);
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','normal');
-  doc.text(CFG.namaAcara, pw/2, 34, {align:'center'});
-  doc.setFontSize(18);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(196,154,74);
-  doc.text('TAHUN '+tahun, pw/2, 43, {align:'center'});
-
-  // Sub-header info strip
-  doc.setFillColor(249,245,240);
-  doc.rect(margin,50,cw,12,'F');
-  doc.setDrawColor(196,154,74);
-  doc.setLineWidth(0.5);
-  doc.rect(margin,50,cw,12,'S');
-  doc.setTextColor(139,94,60);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(8);
-  doc.text(`Total Jadwal: ${sorted.length}  ·  Terlaksana: ${sorted.filter(j=>allAbsen.some(ab=>ab.tanggal_acara===j.tanggal)).length}  ·  Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`, pw/2, 57, {align:'center'});
-
-  let y=68;
-
-  // ── Tabel ──
-  const cols=['No','Tgl Partonggoan','Waktu','Tuan Rumah','Alamat Tuan Rumah','No. HP','Parambilan','Status'];
-  const colW=[10,38,18,35,38,25,28,18];
-
-  // Header tabel
-  let x=margin;
-  doc.setFillColor(61,43,31);
-  doc.rect(x,y,cw,8,'F');
-  doc.setTextColor(196,154,74);
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(7);
-  cols.forEach((c,i)=>{
-    doc.text(c,x+colW[i]/2,y+5.2,{align:'center',maxWidth:colW[i]-2});
-    x+=colW[i];
+  doc.rect(MX,MY,CW,2.5,'F');
+  doc.rect(MX,MY+HDR_H-2,CW,2,'F');
+  // Ornamen titik
+  [6,12,18].forEach(d=>{
+    doc.setFillColor(196,154,74);
+    doc.circle(MX+d,MY+HDR_H/2,0.9,'F');
+    doc.circle(MX+CW-d,MY+HDR_H/2,0.9,'F');
   });
-  y+=8;
+  // Teks header
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(196,154,74);
+  doc.setFontSize(7);
+  doc.text('PERSEKUTUAN KELUARGA SUMBAYAK',PW/2,MY+8,{align:'center'});
+  doc.setFontSize(19);
+  doc.text('JADWAL PARTONGGOAN SUMBAYAK',PW/2,MY+20,{align:'center'});
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(220,205,180);
+  doc.text(CFG.namaAcara,PW/2,MY+28,{align:'center'});
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(17);
+  doc.setTextColor(196,154,74);
+  doc.text('TAHUN '+tahun,PW/2,MY+40,{align:'center'});
 
-  sorted.forEach((j,rowI)=>{
+  let y=MY+HDR_H+3;
+
+  // ── STRIP INFO ──
+  doc.setFillColor(249,245,238);
+  doc.rect(MX,y,CW,9,'F');
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.4);
+  doc.rect(MX,y,CW,9,'S');
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,70,40);
+  doc.text(`Total Jadwal: ${sorted.length}   \u00b7   Terlaksana: ${terlaksana}   \u00b7   Belum: ${sorted.length-terlaksana}   \u00b7   Dicetak: ${tglCetak}`,PW/2,y+6,{align:'center'});
+  y+=12;
+
+  // ── TABEL pakai autoTable ──
+  // Lebar kolom total = CW = 306 mm
+  // No(10) | Tanggal(42) | Waktu(18) | Tuan Rumah(52) | Alamat TH(68) | No.HP(32) | Parambilan(52) | Status(32) = 306
+  const colWidths=[10,42,18,52,68,32,52,32];
+
+  const tableBody=sorted.map((j)=>{
     const ang=allAnggota.find(a=>a.nama===j.tuan_rumah);
     const sudah=allAbsen.some(ab=>ab.tanggal_acara===j.tanggal);
     const jmlH=allAbsen.filter(ab=>ab.tanggal_acara===j.tanggal).length;
-    const vals=[
-      String(j.nomor),
-      j.tanggal||'—',
-      j.waktu||'—',
-      j.tuan_rumah||'—',
-      ang?ang.alamat||'—':'—',
-      ang?ang.no_hp||'—':'—',
-      j.parambilan||'—',
-      sudah?`✓ (${jmlH})` :'Mendatang',
+    return [
+      {content:String(j.nomor),      styles:{halign:'center',fontStyle:'bold',textColor:[139,94,60]}},
+      {content:j.tanggal||'\u2014'},
+      {content:j.waktu||'\u2014',    styles:{halign:'center'}},
+      {content:j.tuan_rumah||'\u2014',styles:{fontStyle:'bold'}},
+      {content:ang?(ang.alamat||'\u2014'):'\u2014'},
+      {content:ang?(ang.no_hp||'\u2014'):'\u2014', styles:{halign:'center'}},
+      {content:j.parambilan||'\u2014'},
+      sudah
+        ?{content:'Terlaksana\n('+jmlH+' hadir)',styles:{halign:'center',textColor:[55,100,60],fontStyle:'bold'}}
+        :{content:'Mendatang',styles:{halign:'center',textColor:[150,110,30]}},
     ];
-    // Hitung tinggi baris (wrap teks)
-    doc.setFontSize(7);
-    let maxH=7;
-    [1,3,4,6].forEach(ci=>{
-      const lines=doc.splitTextToSize(vals[ci],colW[ci]-3);
-      const h=lines.length*4+3;
-      if(h>maxH)maxH=h;
-    });
-    // Page break
-    if(y+maxH>280){doc.addPage();y=20;
-      // Re-draw header on new page
-      let hx=margin;
-      doc.setFillColor(61,43,31);doc.rect(hx,y,cw,8,'F');
-      doc.setTextColor(196,154,74);doc.setFont('helvetica','bold');doc.setFontSize(7);
-      cols.forEach((c,i)=>{doc.text(c,hx+colW[i]/2,y+5.2,{align:'center',maxWidth:colW[i]-2});hx+=colW[i];});
-      y+=8;
-    }
-    // Row bg
-    doc.setFillColor(rowI%2===0?255:251,rowI%2===0?255:247,rowI%2===0?255:236);
-    doc.rect(margin,y,cw,maxH,'F');
-    // Row border
-    doc.setDrawColor(224,220,210);doc.setLineWidth(0.2);doc.rect(margin,y,cw,maxH,'S');
-    // Vertical lines
-    let lx=margin;
-    colW.forEach((w,i)=>{if(i>0){doc.setDrawColor(224,220,210);doc.setLineWidth(0.2);doc.line(lx,y,lx,y+maxH);}lx+=w;});
-    // Cell text
-    let cx=margin;
-    vals.forEach((v,ci)=>{
-      doc.setFont('helvetica',ci===3?'bold':'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(ci===7&&sudah?90:61, ci===7&&sudah?122:43, ci===7&&sudah?92:31);
-      if(ci===0){doc.setFont('helvetica','bold');doc.setTextColor(139,94,60);}
-      const lines=doc.splitTextToSize(v,colW[ci]-3);
-      lines.forEach((line,li)=>doc.text(line,cx+colW[ci]/2,y+4+li*4,{align:'center',maxWidth:colW[ci]-2}));
-      cx+=colW[ci];
-    });
-    y+=maxH;
   });
 
-  // ── Footer ──
-  y+=6;
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.6);doc.line(margin,y,pw-margin,y);
-  y+=5;
-  doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(160,130,100);
-  doc.text(`"Saling mengasihi dan berbagi kasih dalam persekutuan keluarga"`, pw/2, y, {align:'center'});
-  y+=5;
-  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(180,160,130);
-  doc.text(`${CFG.namaAcara}  ·  Tahun ${tahun}  ·  Dicetak: ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}`, pw/2, y, {align:'center'});
+  doc.autoTable({
+    startY:y,
+    margin:{left:MX,right:MX},
+    tableWidth:CW,
+    head:[[
+      {content:'No',          styles:{halign:'center'}},
+      {content:'Tgl Partonggoan'},
+      {content:'Waktu',       styles:{halign:'center'}},
+      {content:'Tuan Rumah'},
+      {content:'Alamat Tuan Rumah'},
+      {content:'No. HP',      styles:{halign:'center'}},
+      {content:'Parambilan'},
+      {content:'Status',      styles:{halign:'center'}},
+    ]],
+    body:tableBody,
+    columnStyles:{
+      0:{cellWidth:colWidths[0],halign:'center'},
+      1:{cellWidth:colWidths[1]},
+      2:{cellWidth:colWidths[2],halign:'center'},
+      3:{cellWidth:colWidths[3]},
+      4:{cellWidth:colWidths[4]},
+      5:{cellWidth:colWidths[5],halign:'center'},
+      6:{cellWidth:colWidths[6]},
+      7:{cellWidth:colWidths[7],halign:'center'},
+    },
+    headStyles:{
+      fillColor:[61,43,31],
+      textColor:[196,154,74],
+      fontStyle:'bold',
+      fontSize:8,
+      cellPadding:3,
+      lineColor:[80,56,40],
+      lineWidth:0.3,
+    },
+    bodyStyles:{
+      fontSize:8,
+      textColor:[50,32,20],
+      cellPadding:{top:3,bottom:3,left:2,right:2},
+      lineColor:[220,210,195],
+      lineWidth:0.2,
+      minCellHeight:10,
+    },
+    alternateRowStyles:{fillColor:[251,247,238]},
+    styles:{overflow:'linebreak',valign:'middle'},
+    theme:'grid',
+    didDrawPage:(data)=>{
+      // Header ulang di halaman baru jika ada
+      if(data.pageNumber>1){
+        doc.setFillColor(61,43,31);doc.rect(0,0,PW,8,'F');
+        doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(196,154,74);
+        doc.text('JADWAL PARTONGGOAN SUMBAYAK '+tahun+' — '+CFG.namaAcara,PW/2,5.5,{align:'center'});
+      }
+    },
+    // Footer setiap halaman
+    didDrawCell:(data)=>{},
+  });
 
-  doc.save(`Jadwal_Partonggoan_Sumbayak_${tahun}.pdf`);
+  // ── FOOTER ──
+  const fy=doc.lastAutoTable.finalY+5;
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.5);doc.line(MX,fy,PW-MX,fy);
+  doc.setFont('helvetica','italic');doc.setFontSize(7.5);doc.setTextColor(160,130,100);
+  doc.text('"Saling mengasihi dan berbagi kasih dalam persekutuan keluarga"',PW/2,fy+4,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(180,155,120);
+  doc.text(CFG.namaAcara+'   \u00b7   Tahun '+tahun+'   \u00b7   Dicetak: '+tglCetak,PW/2,fy+8,{align:'center'});
+
+  doc.save('Jadwal_Partonggoan_Sumbayak_'+tahun+'.pdf');
   showToast('✅ PDF Jadwal berhasil diunduh!');
 }
 
