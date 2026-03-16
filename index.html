@@ -1619,11 +1619,11 @@ function printTTDKehadiran(){
   const bodyRows=allAnggota.map((a,i)=>{
     const tot=jtAll.reduce((s,j)=>s+(cekHadirLocal(a.id,a.nama,j.tanggal)?1:0),0);
     return [
-      {content:String(a.urutan||i+1),styles:{halign:'center',textColor:[139,94,60],fontStyle:'bold',fontSize:9}},
-      {content:a.nama,styles:{fontStyle:'bold',fontSize:9}},
-      {content:a.alamat||'—',styles:{fontSize:8,textColor:[100,80,60]}},
-      {content:tot+'x',styles:{halign:'center',fontStyle:'bold',fontSize:9,textColor:[90,122,92]}},
-      {content:'',styles:{minCellHeight:20}},
+      {content:String(a.urutan||i+1),styles:{halign:'center',textColor:[139,94,60],fontStyle:'bold',fontSize:7}},
+      {content:a.nama,styles:{fontStyle:'bold',fontSize:7}},
+      {content:a.alamat||'—',styles:{fontSize:6.5,textColor:[100,80,60]}},
+      {content:tot+'x',styles:{halign:'center',fontStyle:'bold',fontSize:7,textColor:[90,122,92]}},
+      {content:'',styles:{minCellHeight:16}},
     ];
   });
 
@@ -1635,8 +1635,8 @@ function printTTDKehadiran(){
       {content:'No',styles:{halign:'center'}},
       {content:'Nama Anggota'},
       {content:'Alamat'},
-      {content:'Total\nHadir\n'+tahun,styles:{halign:'center',fontSize:6.5}},
-      {content:'Tanda Tangan\n'+ttdLabel,styles:{halign:'center',fontSize:7}},
+      {content:'Total\nHadir\n'+tahun,styles:{halign:'center',fontSize:5.5}},
+      {content:'Tanda Tangan\n'+ttdLabel,styles:{halign:'center',fontSize:6}},
     ]],
     body:bodyRows,
     columnStyles:{
@@ -1648,15 +1648,15 @@ function printTTDKehadiran(){
     },
     headStyles:{
       fillColor:[61,43,31],textColor:[196,154,74],
-      fontSize:8,fontStyle:'bold',
-      cellPadding:{top:3,bottom:3,left:2,right:2},
+      fontSize:6.5,fontStyle:'bold',
+      cellPadding:{top:2,bottom:2,left:2,right:2},
       lineWidth:0.2,lineColor:[80,56,40],
     },
     bodyStyles:{
-      fontSize:9,textColor:[50,32,20],
-      cellPadding:{top:3,bottom:3,left:3,right:3},
+      fontSize:7,textColor:[50,32,20],
+      cellPadding:{top:2,bottom:2,left:2,right:2},
       lineColor:[210,200,185],lineWidth:0.15,
-      minCellHeight:20,
+      minCellHeight:16,
       valign:'middle',
     },
     alternateRowStyles:{fillColor:[251,247,238]},
