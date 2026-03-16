@@ -1034,14 +1034,13 @@ function renderJadwal(){
 }
 
 // ══════════════════════════════════════════════════
-// EXPORT JADWAL PDF — F4 Landscape (330×233mm), 1 halaman, font 10
+// EXPORT JADWAL PDF — F4 Landscape (330×233mm), 1 halaman
 // ══════════════════════════════════════════════════
 function eksporJadwalPDF(){
   const{jsPDF}=window.jspdf;
-  // F4 Landscape: 330 × 233 mm
   const PW=330, PH=233;
   const doc=new jsPDF({orientation:'landscape',format:[PW,PH],unit:'mm'});
-  const MX=10, MY=6, CW=PW-MX*2; // CW = 310mm
+  const MX=10, MY=6, CW=PW-MX*2; // CW=310
 
   const tahunSel=parseInt((document.getElementById('jadwal-tahun-filter')||{}).value)||new Date().getFullYear();
   const sorted=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahunSel))).sort((a,b)=>a.nomor-b.nomor);
@@ -1050,191 +1049,170 @@ function eksporJadwalPDF(){
   const pengurusList=muatDataPengurus();
   const ttdArr=pengurusList.filter(p=>p.ttd).slice(0,2);
 
-  // ── FONT SIZE ──
-  const FONT_HEAD = 8;     // header kolom
-  const FONT_BODY = 10;    // isi tabel (nama, tanggal, dll)
-  const FONT_PGRS = 9;     // tabel pengurus
-  // Cell padding proporsional dengan font 10
-  const CP = {top:2.5, bottom:2.5, left:2, right:2};
+  // ── FONT & PADDING (font 6.5pt, border proporsional) ──
+  const FONT_HEAD = 7;
+  const FONT_BODY = 6.5;
+  const FONT_PGRS = 10;
+  const CP = {top:1.8, bottom:1.8, left:1.5, right:1.5};
+  const LW = 0.2; // lineWidth proporsional font 6.5
 
-  // ── HITUNG RUANG agar semua muat 1 halaman ──
-  const HEADER_H    = 32;
-  const STRIP_H     = 8;
-  const PGRS_SUBHDR = 7;
-  const TTD_H       = ttdArr.length>0 ? 34 : 0;
-  const FOOTER_H    = 10;
+  // ── HITUNG RUANG 1 HALAMAN ──
+  const HEADER_H    = 28;
+  const STRIP_H     = 7;
+  const PGRS_H      = pengurusList.length*(FONT_PGRS*0.45+2)+8;
+  const TTD_H       = ttdArr.length>0?30:0;
+  const FOOTER_H    = 9;
+  const HEAD_ROW_H  = FONT_HEAD*0.55+CP.top+CP.bottom;
   const SPACING     = 3*4;
-  const HEAD_ROW_H  = FONT_HEAD*0.6 + CP.top + CP.bottom;  // ~8mm
-  const used = MY + HEADER_H + STRIP_H + HEAD_ROW_H + PGRS_SUBHDR + HEAD_ROW_H + TTD_H + FOOTER_H + SPACING;
-  const available   = PH - used;
-  const totalRows   = sorted.length + pengurusList.length;
-  // Tinggi baris proporsional font 10 = minimal 7mm
-  const rowH = totalRows > 0 ? Math.max(7, Math.min(11, available / totalRows)) : 8;
+  const used        = MY+HEADER_H+STRIP_H+HEAD_ROW_H+PGRS_H+TTD_H+FOOTER_H+SPACING;
+  const available   = PH-used;
+  const rowH        = sorted.length>0?Math.max(5,Math.min(9,available/sorted.length)):6;
 
   // ── HEADER ──
   doc.setFillColor(61,43,31);
   doc.rect(MX,MY,CW,HEADER_H,'F');
   doc.setFillColor(196,154,74);
-  doc.rect(MX,MY,CW,2.5,'F');
-  doc.rect(MX,MY+HEADER_H-2,CW,2,'F');
-  [6,12,18].forEach(d=>{
+  doc.rect(MX,MY,CW,2,'F');
+  doc.rect(MX,MY+HEADER_H-1.5,CW,1.5,'F');
+  [5,9,13].forEach(d=>{
     doc.setFillColor(196,154,74);
-    doc.circle(MX+d,MY+HEADER_H/2,0.9,'F');
-    doc.circle(MX+CW-d,MY+HEADER_H/2,0.9,'F');
+    doc.circle(MX+d,MY+HEADER_H/2,0.7,'F');
+    doc.circle(MX+CW-d,MY+HEADER_H/2,0.7,'F');
   });
-  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(196,154,74);
-  doc.text('PERSEKUTUAN KELUARGA SUMBAYAK',PW/2,MY+7,{align:'center'});
-  doc.setFontSize(16);
-  doc.text('JADWAL PARTONGGOAN SUMBAYAK',PW/2,MY+17,{align:'center'});
-  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(220,205,180);
-  doc.text(CFG.namaAcara,PW/2,MY+24,{align:'center'});
-  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(196,154,74);
-  doc.text('TAHUN '+tahunSel,PW/2,MY+30,{align:'center'});
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(9);doc.setTextColor(196,154,74);
+  doc.text('Jadwal Partonggoan TSBP Medan Timur',PW/2,MY+11,{align:'center'});
+  doc.setFontSize(14);
+  doc.text('TAHUN '+tahunSel,PW/2,MY+23,{align:'center'});
 
-  let y = MY + HEADER_H + 2;
+  let y=MY+HEADER_H+2;
 
   // ── STRIP INFO ──
   doc.setFillColor(249,245,238);doc.rect(MX,y,CW,STRIP_H,'F');
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.rect(MX,y,CW,STRIP_H,'S');
-  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(100,70,40);
-  doc.text('Total: '+sorted.length+'   ·   Terlaksana: '+terlaksana+'   ·   Belum: '+(sorted.length-terlaksana)+'   ·   Dicetak: '+tglCetak, PW/2, y+5.5, {align:'center'});
-  y += STRIP_H + 2;
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.25);doc.rect(MX,y,CW,STRIP_H,'S');
+  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(100,70,40);
+  doc.text('Total: '+sorted.length+'  ·  Terlaksana: '+terlaksana+'  ·  Belum: '+(sorted.length-terlaksana)+'  ·  Dicetak: '+tglCetak,PW/2,y+4.8,{align:'center'});
+  y+=STRIP_H+2;
 
   // ── TABEL JADWAL ──
-  // Kolom F4 Landscape 310mm:
-  // No(9)|Tanggal(44)|Waktu(18)|Tuan Rumah(52)|Alamat(68)|No.HP(30)|Parambilan(52)|Status(37) = 310
-  const CW_COLS = [9, 44, 18, 52, 68, 30, 52, 37];
+  // No(9)|Tanggal(44)|Waktu(18)|Tuan Rumah(52)|Alamat(68)|No.HP(30)|Parambilan(52)|Status(37)=310
+  const CW_COLS=[9,44,18,52,68,30,52,37];
 
-  const tableBody = sorted.map(j=>{
-    const ang = allAnggota.find(a=>a.nama===j.tuan_rumah);
-    const sudah = allAbsen.some(ab=>ab.tanggal_acara===j.tanggal)||j.stat_hadir!=null;
+  const tableBody=sorted.map(j=>{
+    const ang=allAnggota.find(a=>a.nama===j.tuan_rumah);
+    const sudah=allAbsen.some(ab=>ab.tanggal_acara===j.tanggal)||j.stat_hadir!=null;
     return [
-      {content:String(j.nomor), styles:{halign:'center',fontStyle:'bold',textColor:[139,94,60]}},
+      {content:String(j.nomor),styles:{halign:'center',fontStyle:'bold',textColor:[139,94,60]}},
       {content:j.tanggal||'—'},
-      {content:j.waktu||'—', styles:{halign:'center'}},
-      {content:j.tuan_rumah||'—', styles:{fontStyle:'bold'}},
+      {content:j.waktu||'—',styles:{halign:'center'}},
+      {content:j.tuan_rumah||'—',styles:{fontStyle:'bold'}},
       {content:ang?(ang.alamat||'—'):'—'},
-      {content:ang?(ang.no_hp||'—'):'—', styles:{halign:'center'}},
+      {content:ang?(ang.no_hp||'—'):'—',styles:{halign:'center'}},
       {content:j.parambilan||'—'},
       sudah
-        ?{content:'Terlaksana', styles:{halign:'center',textColor:[55,100,60],fontStyle:'bold'}}
-        :{content:'Mendatang',  styles:{halign:'center',textColor:[150,110,30]}},
+        ?{content:'Terlaksana',styles:{halign:'center',textColor:[55,100,60],fontStyle:'bold'}}
+        :{content:'Mendatang', styles:{halign:'center',textColor:[150,110,30]}},
     ];
   });
 
   doc.autoTable({
-    startY: y,
-    margin: {left:MX, right:MX},
-    tableWidth: CW,
-    pageBreak: 'avoid',
+    startY:y,
+    margin:{left:MX,right:MX},
+    tableWidth:CW,
+    pageBreak:'avoid',
     head:[[
-      {content:'No',                styles:{halign:'center'}},
+      {content:'No',styles:{halign:'center'}},
       {content:'Tgl Partonggoan'},
-      {content:'Waktu',             styles:{halign:'center'}},
+      {content:'Waktu',styles:{halign:'center'}},
       {content:'Tuan Rumah'},
       {content:'Alamat Tuan Rumah'},
-      {content:'No. HP',            styles:{halign:'center'}},
+      {content:'No. HP',styles:{halign:'center'}},
       {content:'Parambilan'},
-      {content:'Status',            styles:{halign:'center'}},
+      {content:'Status',styles:{halign:'center'}},
     ]],
-    body: tableBody,
+    body:tableBody,
     columnStyles:{
-      0:{cellWidth:CW_COLS[0], halign:'center'},
+      0:{cellWidth:CW_COLS[0],halign:'center'},
       1:{cellWidth:CW_COLS[1]},
-      2:{cellWidth:CW_COLS[2], halign:'center'},
+      2:{cellWidth:CW_COLS[2],halign:'center'},
       3:{cellWidth:CW_COLS[3]},
       4:{cellWidth:CW_COLS[4]},
-      5:{cellWidth:CW_COLS[5], halign:'center'},
+      5:{cellWidth:CW_COLS[5],halign:'center'},
       6:{cellWidth:CW_COLS[6]},
-      7:{cellWidth:CW_COLS[7], halign:'center'},
+      7:{cellWidth:CW_COLS[7],halign:'center'},
     },
     headStyles:{
-      fillColor:[61,43,31], textColor:[196,154,74],
-      fontStyle:'bold', fontSize:FONT_HEAD,
-      cellPadding:{top:2, bottom:2, left:2, right:2},
-      lineColor:[80,56,40], lineWidth:0.3,
+      fillColor:[61,43,31],textColor:[196,154,74],
+      fontStyle:'bold',fontSize:FONT_HEAD,
+      cellPadding:{top:1.8,bottom:1.8,left:1.5,right:1.5},
+      lineColor:[80,56,40],lineWidth:LW,
     },
     bodyStyles:{
       fontSize:FONT_BODY,
       textColor:[50,32,20],
       cellPadding:CP,
       lineColor:[210,198,180],
-      lineWidth:0.3,
+      lineWidth:LW,
       minCellHeight:rowH,
     },
     alternateRowStyles:{fillColor:[251,247,238]},
-    styles:{overflow:'linebreak', valign:'middle'},
+    styles:{overflow:'linebreak',valign:'middle'},
     theme:'grid',
   });
-  y = doc.lastAutoTable.finalY + 3;
+  y=doc.lastAutoTable.finalY+4;
 
-  // ── DAFTAR PENGURUS ──
-  doc.setFillColor(249,245,238);doc.rect(MX,y,CW,PGRS_SUBHDR,'F');
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.rect(MX,y,CW,PGRS_SUBHDR,'S');
+  // ── DAFTAR PENGURUS — tanpa kolom, teks langsung ──
+  // Sub-header
+  doc.setFillColor(249,245,238);doc.rect(MX,y,CW,7,'F');
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.25);doc.rect(MX,y,CW,7,'S');
   doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(61,43,31);
-  doc.text('DAFTAR PENGURUS — TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN — MEDAN TIMUR SEKITARNYA', PW/2, y+5, {align:'center'});
-  y += PGRS_SUBHDR + 1;
+  doc.text('DAFTAR PENGURUS — TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN — MEDAN TIMUR SEKITARNYA',PW/2,y+4.8,{align:'center'});
+  y+=9;
 
-  doc.autoTable({
-    startY: y,
-    margin: {left:MX, right:MX},
-    tableWidth: CW,
-    pageBreak: 'avoid',
-    head:[[
-      {content:'No',     styles:{halign:'center'}},
-      {content:'Jabatan'},
-      {content:'Nama'},
-    ]],
-    body: pengurusList.map((p,i)=>[
-      {content:String(i+1), styles:{halign:'center',textColor:[139,94,60],fontStyle:'bold'}},
-      {content:p.jabatan,   styles:{fontStyle:'bold'}},
-      {content:p.nama},
-    ]),
-    columnStyles:{0:{cellWidth:9,halign:'center'}, 1:{cellWidth:50}, 2:{cellWidth:CW-59}},
-    headStyles:{
-      fillColor:[61,43,31], textColor:[196,154,74],
-      fontSize:FONT_HEAD, fontStyle:'bold',
-      cellPadding:{top:2,bottom:2,left:2,right:2},
-      lineWidth:0.3, lineColor:[80,56,40],
-    },
-    bodyStyles:{
-      fontSize:FONT_PGRS, cellPadding:CP,
-      textColor:[50,32,20],
-      lineColor:[210,198,180], lineWidth:0.3,
-      minCellHeight:rowH*0.85,
-    },
-    alternateRowStyles:{fillColor:[251,247,238]},
-    theme:'grid',
+  // Tampilkan sebaris: Jabatan: Nama  (font 10, tanpa tabel/border)
+  doc.setFontSize(FONT_PGRS);
+  const colsPerRow=2; // 2 pengurus per baris agar muat landscape
+  const pgrsColW=CW/colsPerRow;
+  pengurusList.forEach((p,i)=>{
+    const col=i%colsPerRow;
+    const bx=MX+col*pgrsColW;
+    if(col===0 && i>0) y+=6.5; // baris baru
+    doc.setFont('helvetica','bold');doc.setTextColor(139,94,60);
+    doc.text(p.jabatan+':',bx+4,y);
+    doc.setFont('helvetica','normal');doc.setTextColor(50,32,20);
+    doc.text(p.nama,bx+52,y);
   });
-  y = doc.lastAutoTable.finalY + 4;
+  // Tambah satu baris kalau jumlah ganjil
+  if(pengurusList.length%colsPerRow!==0) y+=6.5;
+  y+=4;
 
   // ── TTD KETUA & SEKRETARIS ──
   if(ttdArr.length>0){
     doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,70,40);
-    doc.text('Ditetapkan di Medan, '+tglCetak, MX, y);
-    y += 8;
-    const ttdW = CW / ttdArr.length;
+    doc.text('Ditetapkan di Medan, '+tglCetak,MX,y);
+    y+=8;
+    const ttdW=CW/ttdArr.length;
     ttdArr.forEach((p,i)=>{
-      const bx = MX + i*ttdW;
-      doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(100,70,40);
-      doc.text(p.jabatan, bx+ttdW/2, y, {align:'center'});
-      const lineY = y + 18;
+      const bx=MX+i*ttdW;
+      doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,70,40);
+      doc.text(p.jabatan,bx+ttdW/2,y,{align:'center'});
+      const lineY=y+17;
       doc.setDrawColor(61,43,31);doc.setLineWidth(0.5);
-      doc.line(bx+ttdW*0.12, lineY, bx+ttdW*0.88, lineY);
+      doc.line(bx+ttdW*0.12,lineY,bx+ttdW*0.88,lineY);
       doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(50,32,20);
-      doc.text(p.nama, bx+ttdW/2, lineY+4.5, {align:'center'});
+      doc.text(p.nama,bx+ttdW/2,lineY+4,{align:'center'});
     });
-    y += 26;
+    y+=24;
   }
 
   // ── FOOTER ──
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.4);doc.line(MX,y,PW-MX,y);y+=3.5;
-  doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(160,130,100);
-  doc.text('"Saling mengasihi dan berbagi kasih dalam persekutuan keluarga"', PW/2, y, {align:'center'});y+=3.5;
-  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(180,155,120);
-  doc.text(CFG.namaAcara+' · Tahun '+tahunSel+' · Dicetak: '+tglCetak, PW/2, y, {align:'center'});
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.35);doc.line(MX,y,PW-MX,y);y+=3;
+  doc.setFont('helvetica','italic');doc.setFontSize(6.5);doc.setTextColor(160,130,100);
+  doc.text('"Saling mengasihi dan berbagi kasih dalam persekutuan keluarga"',PW/2,y,{align:'center'});y+=3.5;
+  doc.setFont('helvetica','normal');doc.setFontSize(6);doc.setTextColor(180,155,120);
+  doc.text(CFG.namaAcara+' · Tahun '+tahunSel+' · Dicetak: '+tglCetak,PW/2,y,{align:'center'});
 
-  doc.save('Jadwal_Partonggoan_Sumbayak_'+tahunSel+'.pdf');
+  doc.save('Jadwal_Partonggoan_'+tahunSel+'.pdf');
   showToast('✅ PDF Jadwal berhasil diunduh!');
 }
 
