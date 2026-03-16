@@ -112,9 +112,11 @@ table.data-tbl td.center{text-align:center;}
 .chip-gold{background:var(--gold-light);color:#7A5C1E;}
 .chip-red{background:var(--red-light);color:var(--red);}
 .chip-gray{background:#F0F2F5;color:#888;}
-.hadir-dot{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:default;transition:none;}
+.hadir-dot{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;transition:transform .15s,opacity .15s;}
+.hadir-dot:hover{transform:scale(1.18);}
 .dot-hadir{background:var(--green);color:white;}
-.dot-tidak{background:#EEE;color:#BBB;}
+.dot-tidak{background:#DDD;color:#AAA;}
+.dot-tidak:hover{background:#C8E6C9;color:var(--green);}
 .rekap-nama{cursor:pointer;font-weight:700;color:var(--dark);}
 .rekap-nama:hover{color:var(--brown);text-decoration:underline;}
 
@@ -336,7 +338,7 @@ table.data-tbl td.center{text-align:center;}
               <tbody id="rekap-tbody"></tbody>
             </table>
           </div>
-          <div style="font-size:11px;color:#AAA;margin-top:8px;text-align:right">💡 Klik <b>nama anggota</b> untuk edit kehadiran partonggoan</div>
+          <div style="font-size:11px;color:#AAA;margin-top:8px;text-align:right">💡 Klik <b>✓/—</b> untuk langsung ubah kehadiran · Klik <b>nama anggota</b> untuk edit massal</div>
         </div>
       </div>
 
@@ -1085,6 +1087,20 @@ function isiTahunSel(){
   const now=new Date().getFullYear();const list=[...new Set([2026,now])].sort((a,b)=>b-a);
   ['tahun-sel','filter-thn-riwayat'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=list.map(t=>`<option value="${t}">${t}</option>`).join('');});
 }
+const var_green='var(--green)',var_gold='var(--gold)';
+
+// ── Cari record absen (cocokkan lewat anggota_id ATAU nama) ──
+function cariRec(anggotaId, namA, tanggal){
+  return allAbsen.find(ab=>
+    (ab.anggota_id===anggotaId || ab.anggota_id===anggotaId ||
+     (ab.nama&&ab.nama.toLowerCase()===namA.toLowerCase()))
+    && ab.tanggal_acara===tanggal
+  );
+}
+function cekHadir(anggotaId, namA, tanggal){
+  return !!cariRec(anggotaId, namA, tanggal);
+}
+
 function muatRekap(){
   const tahun=parseInt(document.getElementById('tahun-sel').value)||new Date().getFullYear();
   const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
@@ -1094,42 +1110,101 @@ function muatRekap(){
     tbody.innerHTML='<tr><td colspan="2" style="text-align:center;color:#AAA;padding:20px">Belum ada jadwal untuk tahun ini.</td></tr>';
     document.getElementById('rekap-summary').innerHTML='';return;
   }
-  thead.innerHTML=`<tr><th style="text-align:left;padding-left:14px">No</th><th style="text-align:left;padding-left:6px">Nama Anggota</th>${jt.map(j=>`<th>P${j.nomor}<br><span style="font-size:9px;opacity:.6;font-weight:400">${(j.tanggal||'').split(' ').slice(-2).join(' ')}</span></th>`).join('')}<th>Total</th></tr>`;
-  if(!allAnggota.length){tbody.innerHTML='<tr><td colspan="'+(jt.length+3)+'" style="text-align:center;color:#AAA;padding:20px">Belum ada anggota</td></tr>';return;}
+  thead.innerHTML=`<tr>
+    <th style="text-align:left;padding-left:14px;width:44px">No</th>
+    <th style="text-align:left;padding-left:6px">Nama Anggota</th>
+    ${jt.map(j=>`<th>P${j.nomor}<br><span style="font-size:9px;opacity:.6;font-weight:400">${(j.tanggal||'').split(' ').slice(-2).join(' ')}</span></th>`).join('')}
+    <th>Total</th>
+  </tr>`;
+  if(!allAnggota.length){
+    tbody.innerHTML='<tr><td colspan="'+(jt.length+3)+'" style="text-align:center;color:#AAA;padding:20px">Belum ada anggota</td></tr>';return;
+  }
   let tPerP=jt.map(()=>0);
   tbody.innerHTML=allAnggota.map((a,idx)=>{
     let tot=0;
     const cols=jt.map((j,pi)=>{
-      const hadir=allAbsen.some(ab=>(ab.anggota_id===a.id||ab.nama===a.nama)&&ab.tanggal_acara===j.tanggal);
+      const hadir=cekHadir(a.id, a.nama, j.tanggal);
       if(hadir){tot++;tPerP[pi]++;}
-      return `<td class="center"><div class="hadir-dot ${hadir?'dot-hadir':'dot-tidak'}" style="cursor:default" title="${hadir?'Hadir':'Belum hadir'}">${hadir?'✓':'—'}</div></td>`;
+      return `<td class="center">
+        <div class="hadir-dot ${hadir?'dot-hadir':'dot-tidak'}"
+          onclick="klikDotHadir(event,'${a.id}','${esc(a.nama)}','${esc(j.tanggal||'')}',${hadir})"
+          title="${hadir?'Hadir — klik untuk batalkan':'Belum hadir — klik untuk tandai hadir'}"
+          style="cursor:pointer">
+          ${hadir?'✓':'—'}
+        </div>
+      </td>`;
     }).join('');
     const pct=jt.length>0?Math.round((tot/jt.length)*100):0;
-    return `<tr>
+    return `<tr id="row-${a.id}">
       <td class="center" style="color:#AAA;font-size:12px">${a.urutan||idx+1}</td>
-      <td class="rekap-nama" onclick="bukaEditKehadiran('${a.id}','${esc(a.nama)}',${tahun})">${a.nama}<br><span style="font-size:10px;color:#AAA;font-weight:400">${a.no_hp||''}</span></td>
+      <td class="rekap-nama" onclick="bukaEditKehadiran('${a.id}','${esc(a.nama)}',${tahun})" title="Klik untuk edit semua kehadiran">${a.nama}<br><span style="font-size:10px;color:#AAA;font-weight:400">${a.no_hp||''}</span></td>
       ${cols}
-      <td class="center"><span class="chip chip-gold">${tot}/${jt.length}</span><br><span style="font-size:10px;color:#AAA">${pct}%</span></td>
+      <td class="center" id="total-${a.id}"><span class="chip chip-gold">${tot}/${jt.length}</span><br><span style="font-size:10px;color:#AAA">${pct}%</span></td>
     </tr>`;
   }).join('');
-  const totalH=allAnggota.reduce((s,a)=>s+jt.reduce((t,j)=>t+(allAbsen.some(ab=>(ab.anggota_id===a.id||ab.nama===a.nama)&&ab.tanggal_acara===j.tanggal)?1:0),0),0);
+  hitungSummary(jt, tPerP);
+}
+
+function hitungSummary(jt, tPerP){
+  const totalH=allAnggota.reduce((s,a)=>s+jt.reduce((t,j)=>t+(cekHadir(a.id,a.nama,j.tanggal)?1:0),0),0);
   const maxM=allAnggota.length*jt.length;const rata=maxM>0?Math.round((totalH/maxM)*100):0;
   const terlaksana=jt.filter((j,i)=>tPerP[i]>0).length;
   document.getElementById('rekap-summary').innerHTML=[
-    {v:allAnggota.length,l:'Total Anggota',bg:'#EEF4EE',c:var_green},
-    {v:jt.length,l:'Jadwal',bg:'#FEF9EC',c:var_gold},
-    {v:terlaksana,l:'Terlaksana',bg:'#EEF4EE',c:var_green},
-    {v:rata+'%',l:'Rata-rata Hadir',bg:'#FEF9EC',c:var_gold},
-  ].map(s=>`<div class="stat-box" style="background:${s.bg}"><div class="stat-icon" style="background:${s.bg};font-size:22px">${s.c===var_green?'📊':'📈'}</div><div><div class="stat-val" style="color:var(--dark)">${s.v}</div><div class="stat-lbl">${s.l}</div></div></div>`).join('');
+    {v:allAnggota.length,l:'Total Anggota',bg:'#EEF4EE'},
+    {v:jt.length,l:'Jadwal',bg:'#FEF9EC'},
+    {v:terlaksana,l:'Terlaksana',bg:'#EEF4EE'},
+    {v:rata+'%',l:'Rata-rata Hadir',bg:'#FEF9EC'},
+  ].map(s=>`<div class="stat-box" style="background:${s.bg}"><div><div class="stat-val" style="color:var(--dark)">${s.v}</div><div class="stat-lbl">${s.l}</div></div></div>`).join('');
 }
-const var_green='var(--green)',var_gold='var(--gold)';
 
-// Toggle kehadiran DISABLED — hanya bisa lewat modal edit kehadiran (klik nama)
-// Fungsi ini sengaja dikosongkan agar dot ✓/— tidak bisa diklik langsung
-function toggleKehadiran(anggotaId,namA,jadwalId,tanggalAcara,sudahHadir){
-  // Nonaktif — gunakan klik nama anggota untuk edit kehadiran
-  return;
+// ── Klik dot langsung toggle hadir/tidak ──
+async function klikDotHadir(ev, anggotaId, namA, tanggalAcara, sudahHadir){
+  ev.stopPropagation();
+  const dot=ev.currentTarget;
+  dot.style.opacity='0.4';dot.style.pointerEvents='none'; // visual feedback loading
+
+  if(sudahHadir){
+    // Hapus record
+    const rec=cariRec(anggotaId, namA, tanggalAcara);
+    if(!rec){dot.style.opacity='1';dot.style.pointerEvents='auto';muatRekap();return;}
+    const{error}=await db.from(CFG.tabelAbsen).delete().eq('id',rec.id);
+    if(error){showToast('❌ Gagal hapus: '+error.message);dot.style.opacity='1';dot.style.pointerEvents='auto';return;}
+    allAbsen=allAbsen.filter(ab=>ab.id!==rec.id);
+    showToast('↩ Kehadiran dibatalkan');
+  } else {
+    // Tambah record — TANPA no_hp untuk hindari unique constraint daftar_hadir_no_hp_key
+    const ang=allAnggota.find(a=>a.id===anggotaId);
+    // Cek duplikat dulu
+    const{data:cek,error:cekErr}=await db.from(CFG.tabelAbsen)
+      .select('id,nama,tanggal_acara,anggota_id,jumlah,waktu,no_hp,nama_acara')
+      .eq('anggota_id',anggotaId).eq('tanggal_acara',tanggalAcara).maybeSingle();
+    if(cek){
+      // Sudah ada — sync cache saja
+      if(!cariRec(anggotaId,namA,tanggalAcara)) allAbsen.push(cek);
+      showToast('ℹ️ Sudah tercatat hadir');
+      dot.style.opacity='1';dot.style.pointerEvents='auto';
+      muatRekap();return;
+    }
+    // Insert baru — tanpa no_hp (hindari unique constraint)
+    const obj={
+      nama:namA,
+      jumlah:1,
+      nama_acara:CFG.namaAcara,
+      tanggal_acara:tanggalAcara,
+      anggota_id:anggotaId,
+    };
+    const{data,error}=await db.from(CFG.tabelAbsen).insert(obj).select().single();
+    if(error){
+      showToast('❌ Gagal: '+error.message);
+      dot.style.opacity='1';dot.style.pointerEvents='auto';return;
+    }
+    allAbsen.push(data);
+    showToast('✅ Kehadiran ditandai');
+  }
+  muatRekap(); // re-render full rekap agar semua counter update
 }
+
+function toggleKehadiran(){return;} // deprecated
 
 function bukaEditKehadiran(anggotaId,namA,tahun){
   ekAnggotaId=anggotaId;ekAnggotaNama=namA;ekTahun=tahun;
@@ -1138,7 +1213,7 @@ function bukaEditKehadiran(anggotaId,namA,tahun){
   document.getElementById('ek-nama').textContent=namA;
   document.getElementById('ek-sub').textContent='Tahun '+tahun+' · Klik untuk centang/uncentang';
   document.getElementById('ek-grid').innerHTML=jt.map(j=>{
-    const hadir=allAbsen.some(ab=>(ab.anggota_id===anggotaId||ab.nama===namA)&&ab.tanggal_acara===j.tanggal);
+    const hadir=cekHadir(anggotaId,namA,j.tanggal);
     return `<label class="check-item" for="ek-${j.id}">
       <input type="checkbox" id="ek-${j.id}" data-jid="${j.id}" data-tgl="${esc(j.tanggal||'')}" ${hadir?'checked':''}>
       <label for="ek-${j.id}" style="pointer-events:none"><b>Partonggoan ${j.nomor}</b><br>${(j.tanggal||'').split(', ').slice(-1)[0]||''}</label>
@@ -1151,7 +1226,7 @@ async function simpanEditKehadiran(){
   for(const j of ekJadwal){
     const cb=document.querySelector(`#ek-${j.id}`);if(!cb)continue;
     const checked=cb.checked;
-    const rec=allAbsen.find(ab=>(ab.anggota_id===ekAnggotaId||ab.nama===ekAnggotaNama)&&ab.tanggal_acara===j.tanggal);
+    const rec=cariRec(ekAnggotaId, ekAnggotaNama, j.tanggal);
     const sudah=!!rec;
 
     if(checked && !sudah){
@@ -1162,9 +1237,8 @@ async function simpanEditKehadiran(){
         allAbsen.push({...cek, nama:ekAnggotaNama, tanggal_acara:j.tanggal, anggota_id:ekAnggotaId});
         continue;
       }
-      const ang=allAnggota.find(a=>a.id===ekAnggotaId);
       const{data,error}=await db.from(CFG.tabelAbsen).insert({
-        nama:ekAnggotaNama, no_hp:ang?.no_hp||null, jumlah:1,
+        nama:ekAnggotaNama, jumlah:1,
         nama_acara:CFG.namaAcara, tanggal_acara:j.tanggal, anggota_id:ekAnggotaId
       }).select().single();
       if(!error&&data){allAbsen.push(data);changed++;}
