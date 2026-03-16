@@ -1560,18 +1560,15 @@ Hapus ${totalRec} data absensi tahun ${tahun}?`))return;
   }
   muatRekap();muatRiwayat();muatStats();
   showToast(`✅ ${deleted} data absensi dihapus`);
-  // Tampilkan panduan SQL
-  const sqlHint=jt.map(j=>`-- Partonggoan ${j.nomor}
-DELETE FROM daftar_hadir WHERE tanggal_acara = '${j.tanggal}';`).join('
-');
-  console.log('SQL yang dijalankan (setara):
-'+sqlHint);
+  // Panduan SQL di console
+  const sqlHint=jt.map(j=>`-- P${j.nomor}: DELETE FROM daftar_hadir WHERE tanggal_acara = '${j.tanggal}';`).join('\n');
+  console.log('SQL setara:\n'+sqlHint);
 }
 
 function eksporRekapWA(){
   const tahun=document.getElementById('tahun-sel').value;const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
   let teks=`📊 *REKAP KEHADIRAN ${tahun}*\n${CFG.namaAcara}\n\n`;
-  allAnggota.forEach((a,i)=>{let tot=0;const dots=jt.map(j=>{const h=allAbsen.some(ab=>(ab.anggota_id===a.id||ab.nama===a.nama)&&ab.tanggal_acara===j.tanggal);if(h)tot++;return h?'✅':'❌';}).join(' ');teks+=`${i+1}. *${a.nama}*\n   ${jt.map(j=>`P${j.nomor}`).join('  ')}\n   ${dots}\n   Hadir: ${tot}/${jt.length}x\n\n`;});
+  allAnggota.forEach((a,i)=>{let tot=0;const dots=jt.map(j=>{const h=allAbsen.some(ab=>(ab.anggota_id===a.id||ab.nama===a.nama)&&ab.tanggal_acara===j.tanggal);if(h)tot++;return h?'✅':'❌';}).join(' ');teks+=(i+1)+'. *'+a.nama+'*\n   '+jt.map(j=>'P'+j.nomor).join('  ')+'\n   '+dots+'\n   Hadir: '+tot+'/'+jt.length+'x\n\n';});
   teks+=`━━━━━━━━━━━━━━━━━\nTotal: ${allAnggota.length} anggota`;
   const n=CFG.nomorGrupWA||'';window.open(n.startsWith('http')?n:`https://wa.me/${n}?text=${encodeURIComponent(teks)}`,'_blank');
 }
