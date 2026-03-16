@@ -306,7 +306,10 @@ table.data-tbl td.center{text-align:center;}
         <div class="section-card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
             <h3 style="margin:0;padding:0;border:none">📋 Daftar Anggota</h3>
-            <input type="text" id="search-anggota" class="search-input" placeholder="🔍 Cari nama / HP..." oninput="filterAnggota()"/>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="text" id="search-anggota" class="search-input" placeholder="🔍 Cari nama / HP..." oninput="filterAnggota()"/>
+              <button class="btn-sm btn-sm-excel" onclick="eksporAnggotaExcel()">📗 Export Excel</button>
+            </div>
           </div>
           <div class="tbl-wrap">
             <table class="data-tbl">
@@ -328,6 +331,7 @@ table.data-tbl td.center{text-align:center;}
                 <button class="btn-sm btn-sm-excel" onclick="eksporExcel()">📗 Excel</button>
                 <button class="btn-sm btn-sm-pptx" onclick="eksporPowerPoint()">📕 PPT</button>
                 <button class="btn-sm btn-sm-wa" onclick="eksporRekapWA()">📲 WA</button>
+                <button class="btn-sm" style="background:var(--red);color:white" onclick="hapusSemualDataRekap()">🗑 Hapus Data Rekap</button>
               </div>
             </div>
           </div>
@@ -373,8 +377,15 @@ table.data-tbl td.center{text-align:center;}
         </div>
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
-          <div style="font-weight:700;color:var(--dark);font-size:14px">📅 Daftar Jadwal <span id="jadwal-count" style="background:var(--gold);color:white;padding:2px 10px;border-radius:8px;font-size:11px;margin-left:6px">0</span></div>
-          <button class="btn-sm btn-sm-pdf" onclick="eksporJadwalPDF()">📄 Export PDF</button>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-weight:700;color:var(--dark);font-size:14px">📅 Daftar Jadwal</div>
+            <select id="jadwal-tahun-filter" class="search-input" style="width:90px" onchange="renderJadwal()"></select>
+            <span id="jadwal-count" style="background:var(--gold);color:white;padding:2px 10px;border-radius:8px;font-size:11px">0</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-sm btn-sm-green" onclick="generateJadwalTahun()" title="Buat otomatis 10 jadwal untuk tahun terpilih">✨ Generate Otomatis</button>
+            <button class="btn-sm btn-sm-pdf" onclick="eksporJadwalPDF()">📄 Export PDF</button>
+          </div>
         </div>
         <div id="jadwal-list"></div>
       </div>
@@ -502,7 +513,16 @@ table.data-tbl td.center{text-align:center;}
           <div class="field"><label>Absen Ijin</label><input type="number" id="mer-ijin" min="0" placeholder="0"/></div>
           <div class="field"><label>Jumlah Hadir (Orang)</label><input type="number" id="mer-jumlah" min="0" placeholder="0"/></div>
         </div>
-        <div class="field" style="margin-top:10px"><label>⛪ Galangan I (Keterangan Ibadah)</label><textarea id="mer-galangan" placeholder="Contoh: Baca Alkitab: Yohanes 3:16, Nyanyian: KJ 23..." style="min-height:70px"></textarea></div>
+        <div class="field" style="margin-top:10px">
+          <label>💰 Galangan (Persembahan) — Rp</label>
+          <div style="position:relative">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700;color:var(--brown);font-size:14px;pointer-events:none">Rp</span>
+            <input type="text" id="mer-galangan" placeholder="0" inputmode="numeric"
+              style="padding-left:36px;font-size:15px;font-weight:700;letter-spacing:.5px"
+              oninput="formatRupiah(this)" onblur="formatRupiah(this)"/>
+          </div>
+          <div style="font-size:11px;color:#AAA;margin-top:4px">Contoh: 1.500.000</div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -898,11 +918,48 @@ async function hapusJadwal(id){
   jadwalList=jadwalList.filter(x=>x.id!==id);renderJadwal();muatRekap();muatRiwayat();showToast(`P${j.nomor} dihapus`);
 }
 
+// Generate jadwal otomatis 10 partonggoan untuk tahun terpilih
+async function generateJadwalTahun(){
+  const tahun=parseInt((document.getElementById('jadwal-tahun-filter')||{}).value)||new Date().getFullYear();
+  const existing=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun)));
+  if(existing.length>0){
+    if(!confirm(`Tahun ${tahun} sudah memiliki ${existing.length} jadwal.
+Tetap tambahkan yang belum ada?`))return;
+  }
+  // Bulan & tanggal minggu ke-3 setiap bulan (default jadwal)
+  const bulanList=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  // Hitung minggu ke-3 setiap bulan untuk tahun tsb
+  function mingguKe3(bln,thn){
+    const d=new Date(thn,bln,1);
+    const hari=d.getDay(); // 0=Minggu
+    const offset=hari===0?0:7-hari;
+    return new Date(thn,bln,1+offset+14); // minggu ke-3
+  }
+  const hariNama=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  let added=0;
+  for(let bln=0;bln<12;bln++){
+    const nomor=bln+1;
+    if(existing.find(j=>j.nomor===nomor)) continue; // skip yang sudah ada
+    const tgl=mingguKe3(bln,tahun);
+    const tglStr=`${hariNama[tgl.getDay()]}, ${tgl.getDate()} ${bulanList[bln]} ${tahun}`;
+    const{data,error}=await db.from(CFG.tabelJadwal).insert({
+      nomor,tanggal:tglStr,waktu:'13.00 WIB',tempat:'',tuan_rumah:''
+    }).select().single();
+    if(!error&&data){jadwalList.push(data);added++;}
+  }
+  jadwalList.sort((a,b)=>a.nomor-b.nomor);
+  renderJadwal();muatRekap();muatRiwayat();
+  if(added>0) showToast(`✅ ${added} jadwal ${tahun} berhasil dibuat!`);
+  else showToast('ℹ️ Semua jadwal sudah ada');
+}
+
 function renderJadwal(){
   const list=document.getElementById('jadwal-list');
-  document.getElementById('jadwal-count').textContent=jadwalList.length;
-  if(!jadwalList.length){list.innerHTML='<div style="text-align:center;padding:40px;color:#CCC">Belum ada jadwal. Tambahkan di atas.</div>';return;}
-  const sorted=[...jadwalList].sort((a,b)=>a.nomor-b.nomor);
+  const tahunSel=parseInt((document.getElementById('jadwal-tahun-filter')||{}).value)||new Date().getFullYear();
+  const filtered=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahunSel)));
+  document.getElementById('jadwal-count').textContent=filtered.length;
+  if(!filtered.length){list.innerHTML=`<div style="text-align:center;padding:40px;color:#CCC">Belum ada jadwal untuk tahun ${tahunSel}.<br><button class="btn-sm btn-sm-green" style="margin-top:12px" onclick="generateJadwalTahun()">✨ Generate Otomatis ${tahunSel}</button></div>`;return;}
+  const sorted=[...filtered].sort((a,b)=>a.nomor-b.nomor);
   list.innerHTML=sorted.map(j=>{
     const sudah=allAbsen.some(ab=>ab.tanggal_acara===j.tanggal);
     const jmlH=allAbsen.filter(ab=>ab.tanggal_acara===j.tanggal).length;
@@ -1084,8 +1141,17 @@ function eksporJadwalPDF(){
 
 // ═══ REKAP ═══
 function isiTahunSel(){
-  const now=new Date().getFullYear();const list=[...new Set([2026,now])].sort((a,b)=>b-a);
-  ['tahun-sel','filter-thn-riwayat'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=list.map(t=>`<option value="${t}">${t}</option>`).join('');});
+  const now=new Date().getFullYear();
+  // 5 tahun ke depan dari tahun sekarang, mulai dari 2026
+  const years=[];
+  const start=Math.min(2026,now);
+  for(let y=start;y<=now+5;y++) years.push(y);
+  const list=[...new Set(years)].sort((a,b)=>b-a);
+  const opts=list.map(t=>`<option value="${t}">${t}</option>`).join('');
+  ['tahun-sel','filter-thn-riwayat','jadwal-tahun-filter'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.innerHTML=opts;if(el.id==='jadwal-tahun-filter')el.value=String(now);}
+  });
 }
 const var_green='var(--green)',var_gold='var(--gold)';
 
@@ -1292,7 +1358,7 @@ function muatRiwayat(){
         <div class="rstat"><div><div style="font-size:9px;color:#AAA;text-transform:uppercase">Absen Ijin</div><div class="rstat-val red">${ijinOverride}</div></div></div>
         <div class="rstat"><div><div style="font-size:9px;color:#AAA;text-transform:uppercase">Jumlah Yang Hadir</div><div class="rstat-val gold">${jumlahOverride} orang</div></div></div>
       </div>
-      ${j.galangan?`<div style="padding:10px 18px 14px;border-top:1px solid #F0F2F5"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--brown);margin-bottom:5px">⛪ Galangan I</div><div style="font-size:13px;color:var(--dark);line-height:1.7;white-space:pre-line">${j.galangan}</div></div>`:''}
+      ${j.galangan?`<div style="padding:10px 18px 14px;border-top:1px solid #F0F2F5;display:flex;align-items:center;gap:14px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--brown);margin-bottom:2px">💰 Galangan (Persembahan)</div><div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--green)">Rp ${Number(j.galangan).toLocaleString('id-ID')}</div></div>`:''}
     </div>`;
   }).join('');
 }
@@ -1314,7 +1380,7 @@ function bukaEditRiwayat(jadwalId){
   document.getElementById('mer-hadir').value=j.stat_hadir!=null?j.stat_hadir:jmlHadir;
   document.getElementById('mer-ijin').value=j.stat_ijin!=null?j.stat_ijin:jmlAbsen;
   document.getElementById('mer-jumlah').value=j.stat_jumlah!=null?j.stat_jumlah:totalOrang;
-  document.getElementById('mer-galangan').value=j.galangan||'';
+  setRupiahValue('mer-galangan',j.galangan||0);
   openModal('m-edit-riwayat');
 }
 async function simpanEditRiwayat(){
@@ -1324,7 +1390,7 @@ async function simpanEditRiwayat(){
     stat_hadir:parseInt(document.getElementById('mer-hadir').value)||0,
     stat_ijin:parseInt(document.getElementById('mer-ijin').value)||0,
     stat_jumlah:parseInt(document.getElementById('mer-jumlah').value)||0,
-    galangan:document.getElementById('mer-galangan').value.trim(),
+    galangan:getRupiahValue('mer-galangan'),
   };
   const{data,error}=await db.from(CFG.tabelJadwal).update(upd).eq('id',id).select().single();
   if(error){showToast('❌ Gagal: '+error.message);return;}
@@ -1364,6 +1430,7 @@ function eksporRiwayatPDF(jadwalId){
     ['Parambilan',j.parambilan||'—'],
     ['Siboan Doding',j.siboan_doding||'—'],
     ['Tonggo Syafaat',j.tonggo_syafaat||'—'],
+    ['Galangan (Persembahan)', j.galangan ? 'Rp '+Number(j.galangan).toLocaleString('id-ID') : '—'],
   ];
   doc.setFillColor(249,245,240);doc.roundedRect(margin,y,cw,infos.length*8+4,2,2,'F');
   doc.setDrawColor(196,154,74);doc.setLineWidth(0.4);doc.roundedRect(margin,y,cw,infos.length*8+4,2,2,'S');
@@ -1386,6 +1453,7 @@ function eksporRiwayatPDF(jadwalId){
   doc.setTextColor(196,154,74);doc.setFont('helvetica','bold');doc.setFontSize(8);
   doc.text('STATISTIK KEHADIRAN', pw/2, y+5.5, {align:'center'});
   y+=10;
+  const galanganStr=j.galangan?'Rp '+Number(j.galangan).toLocaleString('id-ID'):'—';
   const stats=[
     {lbl:'Total Anggota',val:String(allAnggota.length),bg:[249,245,240]},
     {lbl:'Absen Hadir',val:String(jmlHadir),bg:[232,245,233]},
@@ -1421,6 +1489,19 @@ function eksporRiwayatPDF(jadwalId){
   doc.text(`${jmlHadir} dari ${allAnggota.length} anggota hadir`,margin+6,y+15);
   y+=24;
 
+  // Galangan / Persembahan block
+  if(j.galangan){
+    doc.setFillColor(254,249,236);
+    doc.roundedRect(margin,y,cw,14,2,2,'F');
+    doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);
+    doc.roundedRect(margin,y,cw,14,2,2,'S');
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(139,94,60);
+    doc.text('💰  GALANGAN / PERSEMBAHAN',margin+6,y+6);
+    doc.setFont('helvetica','bold');doc.setFontSize(14);doc.setTextColor(90,122,60);
+    doc.text(galanganStr,pw-margin-6,y+9,{align:'right'});
+    y+=18;
+  }
+
   // Footer
   y=Math.max(y,260);
   doc.setDrawColor(196,154,74);doc.setLineWidth(0.5);doc.line(margin,y,pw-margin,y);y+=5;
@@ -1434,6 +1515,59 @@ function eksporRiwayatPDF(jadwalId){
 }
 
 // ═══ EXPORT EXCEL & PPT ═══
+// Export daftar anggota ke Excel
+function eksporAnggotaExcel(){
+  if(!allAnggota.length){showToast('Belum ada anggota!');return;}
+  const wb=XLSX.utils.book_new();
+  const hdr=['No','Nama Anggota','Alamat','No. HP','Total Hadir'];
+  const rows=allAnggota.map((a,i)=>{
+    const tot=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama).length;
+    return [a.urutan||i+1, a.nama, a.alamat||'', a.no_hp||'', tot];
+  });
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[{wch:6},{wch:32},{wch:36},{wch:18},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'Daftar Anggota');
+  XLSX.writeFile(wb,`Daftar_Anggota_Partonggoan_${new Date().getFullYear()}.xlsx`);
+  showToast('✅ Export Excel anggota berhasil!');
+}
+
+// Hapus semua data rekap (daftar_hadir) untuk tahun tertentu
+async function hapusSemualDataRekap(){
+  const tahun=parseInt(document.getElementById('tahun-sel').value)||new Date().getFullYear();
+  const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun)));
+  if(!jt.length){showToast('Tidak ada jadwal untuk tahun ini');return;}
+  const totalRec=allAbsen.filter(ab=>jt.some(j=>j.tanggal===ab.tanggal_acara)).length;
+  if(totalRec===0){showToast('ℹ️ Tidak ada data absensi untuk tahun '+tahun);return;}
+  if(!confirm(`⚠️ PERINGATAN!
+
+Ini akan MENGHAPUS ${totalRec} data absensi tahun ${tahun}.
+
+Semua centang kehadiran rekap akan hilang permanen.
+Data anggota TIDAK dihapus.
+
+Lanjutkan?`))return;
+  if(!confirm(`Konfirmasi terakhir:
+Hapus ${totalRec} data absensi tahun ${tahun}?`))return;
+  // Hapus per tanggal partonggoan
+  let deleted=0;
+  for(const j of jt){
+    const{error,count}=await db.from(CFG.tabelAbsen).delete().eq('tanggal_acara',j.tanggal);
+    if(!error){
+      const before=allAbsen.length;
+      allAbsen=allAbsen.filter(ab=>ab.tanggal_acara!==j.tanggal);
+      deleted+=before-allAbsen.length;
+    }
+  }
+  muatRekap();muatRiwayat();muatStats();
+  showToast(`✅ ${deleted} data absensi dihapus`);
+  // Tampilkan panduan SQL
+  const sqlHint=jt.map(j=>`-- Partonggoan ${j.nomor}
+DELETE FROM daftar_hadir WHERE tanggal_acara = '${j.tanggal}';`).join('
+');
+  console.log('SQL yang dijalankan (setara):
+'+sqlHint);
+}
+
 function eksporRekapWA(){
   const tahun=document.getElementById('tahun-sel').value;const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
   let teks=`📊 *REKAP KEHADIRAN ${tahun}*\n${CFG.namaAcara}\n\n`;
@@ -1506,6 +1640,23 @@ async function eksporPowerPoint(){
   }
   s4.addText(`Generated: ${tgl}  ·  ${CFG.namaAcara}`,{x:.4,y:4.6,w:12.5,fontSize:9,color:'555555',align:'center',fontFace:'Lato'});
   await pptx.writeFile({fileName:`Rekap_Partonggoan_${tahun}.pptx`});showToast('✅ PowerPoint diunduh!');
+}
+
+// ── Format Rupiah ──
+function formatRupiah(input){
+  let val=input.value.replace(/[^\d]/g,'');
+  if(!val){input.value='';return;}
+  input.value=parseInt(val,10).toLocaleString('id-ID');
+}
+function getRupiahValue(inputId){
+  const v=(document.getElementById(inputId).value||'').replace(/\./g,'').replace(/,/g,'').replace(/[^\d]/g,'');
+  return parseInt(v)||0;
+}
+function setRupiahValue(inputId,angka){
+  const el=document.getElementById(inputId);
+  if(!el)return;
+  if(!angka||angka===0){el.value='';return;}
+  el.value=Number(angka).toLocaleString('id-ID');
 }
 
 // ═══ AUTOCOMPLETE ═══
