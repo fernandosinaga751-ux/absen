@@ -582,14 +582,15 @@ const CFG = {
   supabaseKey : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qYnBiZ3h5ZWhzcWJvd2VtbnluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MDY4MTksImV4cCI6MjA4NzQ4MjgxOX0.KR_4u6Ph3aFM-ZLqRRYztVlbgKNUi7mvrMOyb7k1U_U",
   tabelAbsen  : "daftar_hadir",
   tabelAnggota: "anggota",
-  tabelJadwal : "jadwal_partonggoan",
-  adminPass   : "admin123",
+  tabelJadwal  : "jadwal_partonggoan",
+  tabelPengurus: "pengurus",
+  adminPass    : "admin123",
 };
 
 const {createClient} = supabase;
 const db = createClient(CFG.supabaseUrl, CFG.supabaseKey);
 
-let allAnggota=[], allAbsen=[], jadwalList=[], importData=[];
+let allAnggota=[], allAbsen=[], jadwalList=[], importData=[], pengurusDB=[];
 let ekAnggotaId=null, ekAnggotaNama=null, ekTahun=null, ekJadwal=[];
 
 // ═══ INIT ═══
@@ -634,15 +635,18 @@ function showAdmin(){
 }
 
 async function loadAllData(){
-  const[r1,r2,r3]=await Promise.all([
+  const[r1,r2,r3,r4]=await Promise.all([
     db.from(CFG.tabelAnggota).select('*').order('urutan,nama'),
     db.from(CFG.tabelAbsen).select('*').order('waktu',{ascending:false}),
     db.from(CFG.tabelJadwal).select('*').order('nomor'),
+    db.from(CFG.tabelPengurus).select('*').order('urutan'),
   ]);
   allAnggota=r1.data||[];
   allAbsen=r2.data||[];
   jadwalList=r3.data||[];
+  pengurusDB=r4.data||[];
   if(!jadwalList.length) await seedJadwal();
+  if(!pengurusDB.length) await seedPengurus();
 }
 
 // ═══ TAB NAV ═══
@@ -1029,202 +1033,208 @@ function renderJadwal(){
   }).join('');
 }
 
-// ═══════════════════════════════
-// EXPORT JADWAL PDF — F4 Landscape (330×233mm), profesional
-// ═══════════════════════════════
+// ══════════════════════════════════════════════════
+// EXPORT JADWAL PDF — F4 Landscape (330×233mm), 1 halaman, font 10
+// ══════════════════════════════════════════════════
 function eksporJadwalPDF(){
   const{jsPDF}=window.jspdf;
-  // Ukuran F4 landscape: 330 x 233 mm
+  // F4 Landscape: 330 × 233 mm
   const PW=330, PH=233;
   const doc=new jsPDF({orientation:'landscape',format:[PW,PH],unit:'mm'});
-  const MX=12, MY=8;
-  const CW=PW-MX*2; // 306 mm
-  const tahun=new Date().getFullYear();
-  const sorted=[...jadwalList].sort((a,b)=>a.nomor-b.nomor);
-  const terlaksana=sorted.filter(j=>allAbsen.some(ab=>ab.tanggal_acara===j.tanggal)).length;
+  const MX=10, MY=6, CW=PW-MX*2; // CW = 310mm
+
+  const tahunSel=parseInt((document.getElementById('jadwal-tahun-filter')||{}).value)||new Date().getFullYear();
+  const sorted=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahunSel))).sort((a,b)=>a.nomor-b.nomor);
+  const terlaksana=sorted.filter(j=>allAbsen.some(ab=>ab.tanggal_acara===j.tanggal)||j.stat_hadir!=null).length;
   const tglCetak=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  const pengurusList=muatDataPengurus();
+  const ttdArr=pengurusList.filter(p=>p.ttd).slice(0,2);
+
+  // ── FONT SIZE ──
+  const FONT_HEAD = 8;     // header kolom
+  const FONT_BODY = 10;    // isi tabel (nama, tanggal, dll)
+  const FONT_PGRS = 9;     // tabel pengurus
+  // Cell padding proporsional dengan font 10
+  const CP = {top:2.5, bottom:2.5, left:2, right:2};
+
+  // ── HITUNG RUANG agar semua muat 1 halaman ──
+  const HEADER_H    = 32;
+  const STRIP_H     = 8;
+  const PGRS_SUBHDR = 7;
+  const TTD_H       = ttdArr.length>0 ? 34 : 0;
+  const FOOTER_H    = 10;
+  const SPACING     = 3*4;
+  const HEAD_ROW_H  = FONT_HEAD*0.6 + CP.top + CP.bottom;  // ~8mm
+  const used = MY + HEADER_H + STRIP_H + HEAD_ROW_H + PGRS_SUBHDR + HEAD_ROW_H + TTD_H + FOOTER_H + SPACING;
+  const available   = PH - used;
+  const totalRows   = sorted.length + pengurusList.length;
+  // Tinggi baris proporsional font 10 = minimal 7mm
+  const rowH = totalRows > 0 ? Math.max(7, Math.min(11, available / totalRows)) : 8;
 
   // ── HEADER ──
-  const HDR_H=44;
   doc.setFillColor(61,43,31);
-  doc.rect(MX,MY,CW,HDR_H,'F');
-  // Garis emas atas & bawah header
+  doc.rect(MX,MY,CW,HEADER_H,'F');
   doc.setFillColor(196,154,74);
   doc.rect(MX,MY,CW,2.5,'F');
-  doc.rect(MX,MY+HDR_H-2,CW,2,'F');
-  // Ornamen titik
+  doc.rect(MX,MY+HEADER_H-2,CW,2,'F');
   [6,12,18].forEach(d=>{
     doc.setFillColor(196,154,74);
-    doc.circle(MX+d,MY+HDR_H/2,0.9,'F');
-    doc.circle(MX+CW-d,MY+HDR_H/2,0.9,'F');
+    doc.circle(MX+d,MY+HEADER_H/2,0.9,'F');
+    doc.circle(MX+CW-d,MY+HEADER_H/2,0.9,'F');
   });
-  // Teks header
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(196,154,74);
-  doc.setFontSize(7);
-  doc.text('PERSEKUTUAN KELUARGA SUMBAYAK',PW/2,MY+8,{align:'center'});
-  doc.setFontSize(19);
-  doc.text('JADWAL PARTONGGOAN SUMBAYAK',PW/2,MY+16,{align:'center'});
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(220,205,180);
-  doc.text(CFG.namaAcara,PW/2,MY+28,{align:'center'});
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(17);
-  doc.setTextColor(196,154,74);
-  doc.text('TAHUN '+tahun,PW/2,MY+40,{align:'center'});
+  doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(196,154,74);
+  doc.text('PERSEKUTUAN KELUARGA SUMBAYAK',PW/2,MY+7,{align:'center'});
+  doc.setFontSize(16);
+  doc.text('JADWAL PARTONGGOAN SUMBAYAK',PW/2,MY+17,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(220,205,180);
+  doc.text(CFG.namaAcara,PW/2,MY+24,{align:'center'});
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(196,154,74);
+  doc.text('TAHUN '+tahunSel,PW/2,MY+30,{align:'center'});
 
-  let y=MY+HDR_H+3;
+  let y = MY + HEADER_H + 2;
 
   // ── STRIP INFO ──
-  doc.setFillColor(249,245,238);
-  doc.rect(MX,y,CW,9,'F');
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.4);
-  doc.rect(MX,y,CW,9,'S');
-  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,70,40);
-  doc.text(`Total Jadwal: ${sorted.length}   \u00b7   Terlaksana: ${terlaksana}   \u00b7   Belum: ${sorted.length-terlaksana}   \u00b7   Dicetak: ${tglCetak}`,PW/2,y+6,{align:'center'});
-  y+=12;
+  doc.setFillColor(249,245,238);doc.rect(MX,y,CW,STRIP_H,'F');
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.rect(MX,y,CW,STRIP_H,'S');
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(100,70,40);
+  doc.text('Total: '+sorted.length+'   ·   Terlaksana: '+terlaksana+'   ·   Belum: '+(sorted.length-terlaksana)+'   ·   Dicetak: '+tglCetak, PW/2, y+5.5, {align:'center'});
+  y += STRIP_H + 2;
 
-  // ── TABEL pakai autoTable ──
-  // Lebar kolom total = CW = 306 mm
-  // No(10) | Tanggal(42) | Waktu(18) | Tuan Rumah(52) | Alamat TH(68) | No.HP(32) | Parambilan(52) | Status(32) = 306
-  const colWidths=[10,42,18,52,68,32,52,32];
+  // ── TABEL JADWAL ──
+  // Kolom F4 Landscape 310mm:
+  // No(9)|Tanggal(44)|Waktu(18)|Tuan Rumah(52)|Alamat(68)|No.HP(30)|Parambilan(52)|Status(37) = 310
+  const CW_COLS = [9, 44, 18, 52, 68, 30, 52, 37];
 
-  const tableBody=sorted.map((j)=>{
-    const ang=allAnggota.find(a=>a.nama===j.tuan_rumah);
-    const sudah=allAbsen.some(ab=>ab.tanggal_acara===j.tanggal);
-    const jmlH=allAbsen.filter(ab=>ab.tanggal_acara===j.tanggal).length;
+  const tableBody = sorted.map(j=>{
+    const ang = allAnggota.find(a=>a.nama===j.tuan_rumah);
+    const sudah = allAbsen.some(ab=>ab.tanggal_acara===j.tanggal)||j.stat_hadir!=null;
     return [
-      {content:String(j.nomor),      styles:{halign:'center',fontStyle:'bold',textColor:[139,94,60]}},
-      {content:j.tanggal||'\u2014'},
-      {content:j.waktu||'\u2014',    styles:{halign:'center'}},
-      {content:j.tuan_rumah||'\u2014',styles:{fontStyle:'bold'}},
-      {content:ang?(ang.alamat||'\u2014'):'\u2014'},
-      {content:ang?(ang.no_hp||'\u2014'):'\u2014', styles:{halign:'center'}},
-      {content:j.parambilan||'\u2014'},
+      {content:String(j.nomor), styles:{halign:'center',fontStyle:'bold',textColor:[139,94,60]}},
+      {content:j.tanggal||'—'},
+      {content:j.waktu||'—', styles:{halign:'center'}},
+      {content:j.tuan_rumah||'—', styles:{fontStyle:'bold'}},
+      {content:ang?(ang.alamat||'—'):'—'},
+      {content:ang?(ang.no_hp||'—'):'—', styles:{halign:'center'}},
+      {content:j.parambilan||'—'},
       sudah
-        ?{content:'Terlaksana',styles:{halign:'center',textColor:[55,100,60],fontStyle:'bold'}}
-        :{content:'Mendatang',styles:{halign:'center',textColor:[150,110,30]}},
+        ?{content:'Terlaksana', styles:{halign:'center',textColor:[55,100,60],fontStyle:'bold'}}
+        :{content:'Mendatang',  styles:{halign:'center',textColor:[150,110,30]}},
     ];
   });
 
   doc.autoTable({
-    startY:y,
-    margin:{left:MX,right:MX},
-    tableWidth:CW,
+    startY: y,
+    margin: {left:MX, right:MX},
+    tableWidth: CW,
+    pageBreak: 'avoid',
     head:[[
-      {content:'No',          styles:{halign:'center'}},
+      {content:'No',                styles:{halign:'center'}},
       {content:'Tgl Partonggoan'},
-      {content:'Waktu',       styles:{halign:'center'}},
+      {content:'Waktu',             styles:{halign:'center'}},
       {content:'Tuan Rumah'},
       {content:'Alamat Tuan Rumah'},
-      {content:'No. HP',      styles:{halign:'center'}},
+      {content:'No. HP',            styles:{halign:'center'}},
       {content:'Parambilan'},
-      {content:'Status',      styles:{halign:'center'}},
+      {content:'Status',            styles:{halign:'center'}},
     ]],
-    body:tableBody,
+    body: tableBody,
     columnStyles:{
-      0:{cellWidth:colWidths[0],halign:'center'},
-      1:{cellWidth:colWidths[1]},
-      2:{cellWidth:colWidths[2],halign:'center'},
-      3:{cellWidth:colWidths[3]},
-      4:{cellWidth:colWidths[4]},
-      5:{cellWidth:colWidths[5],halign:'center'},
-      6:{cellWidth:colWidths[6]},
-      7:{cellWidth:colWidths[7],halign:'center'},
+      0:{cellWidth:CW_COLS[0], halign:'center'},
+      1:{cellWidth:CW_COLS[1]},
+      2:{cellWidth:CW_COLS[2], halign:'center'},
+      3:{cellWidth:CW_COLS[3]},
+      4:{cellWidth:CW_COLS[4]},
+      5:{cellWidth:CW_COLS[5], halign:'center'},
+      6:{cellWidth:CW_COLS[6]},
+      7:{cellWidth:CW_COLS[7], halign:'center'},
     },
     headStyles:{
-      fillColor:[61,43,31],
-      textColor:[196,154,74],
-      fontStyle:'bold',
-      fontSize:8,
-      cellPadding:3,
-      lineColor:[80,56,40],
-      lineWidth:0.3,
+      fillColor:[61,43,31], textColor:[196,154,74],
+      fontStyle:'bold', fontSize:FONT_HEAD,
+      cellPadding:{top:2, bottom:2, left:2, right:2},
+      lineColor:[80,56,40], lineWidth:0.3,
     },
     bodyStyles:{
-      fontSize:8,
+      fontSize:FONT_BODY,
       textColor:[50,32,20],
-      cellPadding:{top:3,bottom:3,left:2,right:2},
-      lineColor:[220,210,195],
-      lineWidth:0.2,
-      minCellHeight:10,
+      cellPadding:CP,
+      lineColor:[210,198,180],
+      lineWidth:0.3,
+      minCellHeight:rowH,
     },
     alternateRowStyles:{fillColor:[251,247,238]},
-    styles:{overflow:'linebreak',valign:'middle'},
+    styles:{overflow:'linebreak', valign:'middle'},
     theme:'grid',
-    didDrawPage:(data)=>{
-      // Header ulang di halaman baru jika ada
-      if(data.pageNumber>1){
-        doc.setFillColor(61,43,31);doc.rect(0,0,PW,8,'F');
-        doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(196,154,74);
-        doc.text('JADWAL PARTONGGOAN SUMBAYAK '+tahun+' — '+CFG.namaAcara,PW/2,5.5,{align:'center'});
-      }
-    },
-    // Footer setiap halaman
-    didDrawCell:(data)=>{},
   });
+  y = doc.lastAutoTable.finalY + 3;
 
   // ── DAFTAR PENGURUS ──
-  let fy=doc.lastAutoTable.finalY+8;
-  const pengurusList=muatDataPengurus();
-  const spaceNeeded=14+pengurusList.length*8+40;
-  if((PH-fy-20)<spaceNeeded){doc.addPage();fy=14;}
+  doc.setFillColor(249,245,238);doc.rect(MX,y,CW,PGRS_SUBHDR,'F');
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.rect(MX,y,CW,PGRS_SUBHDR,'S');
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(61,43,31);
+  doc.text('DAFTAR PENGURUS — TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN — MEDAN TIMUR SEKITARNYA', PW/2, y+5, {align:'center'});
+  y += PGRS_SUBHDR + 1;
 
-  // Sub-header pengurus
-  doc.setFillColor(249,245,238);doc.rect(MX,fy,CW,8,'F');
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.rect(MX,fy,CW,8,'S');
-  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(61,43,31);
-  doc.text('DAFTAR PENGURUS TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN',PW/2,fy+5.5,{align:'center'});
-  fy+=10;
-
-  // Tabel pengurus
   doc.autoTable({
-    startY:fy,
-    margin:{left:MX,right:MX},
-    tableWidth:CW,
-    head:[[{content:'No',styles:{halign:'center'}},{content:'Jabatan'},{content:'Nama'}]],
-    body:pengurusList.map((p,i)=>[
-      {content:String(i+1),styles:{halign:'center',textColor:[139,94,60],fontStyle:'bold'}},
-      {content:p.jabatan,styles:{fontStyle:'bold'}},
+    startY: y,
+    margin: {left:MX, right:MX},
+    tableWidth: CW,
+    pageBreak: 'avoid',
+    head:[[
+      {content:'No',     styles:{halign:'center'}},
+      {content:'Jabatan'},
+      {content:'Nama'},
+    ]],
+    body: pengurusList.map((p,i)=>[
+      {content:String(i+1), styles:{halign:'center',textColor:[139,94,60],fontStyle:'bold'}},
+      {content:p.jabatan,   styles:{fontStyle:'bold'}},
       {content:p.nama},
     ]),
-    columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:52},2:{cellWidth:CW-62}},
-    headStyles:{fillColor:[61,43,31],textColor:[196,154,74],fontSize:7.5,fontStyle:'bold',cellPadding:3},
-    bodyStyles:{fontSize:8,cellPadding:3,textColor:[50,32,20]},
+    columnStyles:{0:{cellWidth:9,halign:'center'}, 1:{cellWidth:50}, 2:{cellWidth:CW-59}},
+    headStyles:{
+      fillColor:[61,43,31], textColor:[196,154,74],
+      fontSize:FONT_HEAD, fontStyle:'bold',
+      cellPadding:{top:2,bottom:2,left:2,right:2},
+      lineWidth:0.3, lineColor:[80,56,40],
+    },
+    bodyStyles:{
+      fontSize:FONT_PGRS, cellPadding:CP,
+      textColor:[50,32,20],
+      lineColor:[210,198,180], lineWidth:0.3,
+      minCellHeight:rowH*0.85,
+    },
     alternateRowStyles:{fillColor:[251,247,238]},
     theme:'grid',
   });
-  fy=doc.lastAutoTable.finalY+12;
+  y = doc.lastAutoTable.finalY + 4;
 
-  // TTD Ketua & Sekretaris
-  const ttdArr=pengurusList.filter(p=>p.ttd).slice(0,2);
+  // ── TTD KETUA & SEKRETARIS ──
   if(ttdArr.length>0){
     doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(100,70,40);
-    doc.text('Ditetapkan di Medan, '+tglCetak,MX,fy);
-    fy+=12;
-    const ttdW=CW/ttdArr.length;
+    doc.text('Ditetapkan di Medan, '+tglCetak, MX, y);
+    y += 8;
+    const ttdW = CW / ttdArr.length;
     ttdArr.forEach((p,i)=>{
-      const bx=MX+i*ttdW;
+      const bx = MX + i*ttdW;
       doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(100,70,40);
-      doc.text(p.jabatan,bx+ttdW/2,fy,{align:'center'});
-      const lineY=fy+24;
-      doc.setDrawColor(61,43,31);doc.setLineWidth(0.6);
-      doc.line(bx+ttdW*0.12,lineY,bx+ttdW*0.88,lineY);
+      doc.text(p.jabatan, bx+ttdW/2, y, {align:'center'});
+      const lineY = y + 18;
+      doc.setDrawColor(61,43,31);doc.setLineWidth(0.5);
+      doc.line(bx+ttdW*0.12, lineY, bx+ttdW*0.88, lineY);
       doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(50,32,20);
-      doc.text(p.nama,bx+ttdW/2,lineY+5,{align:'center'});
+      doc.text(p.nama, bx+ttdW/2, lineY+4.5, {align:'center'});
     });
-    fy+=36;
+    y += 26;
   }
 
-  // ── GARIS FOOTER ──
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.4);doc.line(MX,fy,PW-MX,fy);fy+=4;
+  // ── FOOTER ──
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.4);doc.line(MX,y,PW-MX,y);y+=3.5;
   doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(160,130,100);
-  doc.text('"Saling mengasihi dan berbagi kasih dalam persekutuan keluarga"',PW/2,fy,{align:'center'});fy+=4;
+  doc.text('"Saling mengasihi dan berbagi kasih dalam persekutuan keluarga"', PW/2, y, {align:'center'});y+=3.5;
   doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(180,155,120);
-  doc.text(CFG.namaAcara+' · Tahun '+tahun+' · Dicetak: '+tglCetak,PW/2,fy,{align:'center'});
+  doc.text(CFG.namaAcara+' · Tahun '+tahunSel+' · Dicetak: '+tglCetak, PW/2, y, {align:'center'});
 
-  doc.save('Jadwal_Partonggoan_Sumbayak_'+tahun+'.pdf');
+  doc.save('Jadwal_Partonggoan_Sumbayak_'+tahunSel+'.pdf');
   showToast('✅ PDF Jadwal berhasil diunduh!');
 }
 
@@ -1814,24 +1824,23 @@ Hapus ${totalRec} data absensi tahun ${tahun}?`))return;
 }
 
 // ═══ PENGURUS ═══
-// Data default pengurus (bisa diedit)
 const PENGURUS_DEFAULT = [
-  {jabatan:'Ketua',        nama:'St. Salmek Sumbayak, SH., MH',      ttd:true},
-  {jabatan:'Wakil Ketua',  nama:'St. Jhon Ray Sumbayak, SE.',          ttd:false},
-  {jabatan:'Sekretaris',   nama:'Roni Linga',                          ttd:true},
-  {jabatan:'Wakil Sekretaris',nama:'Richard Fernando Sinaga',          ttd:false},
-  {jabatan:'Bendahara',    nama:'St. Meriana Elpe br. Saragih, Msn.', ttd:false},
+  {jabatan:'Ketua',            nama:'St. Salmek Sumbayak, SH., MH',      ttd:true,  urutan:1},
+  {jabatan:'Wakil Ketua',      nama:'St. Jhon Ray Sumbayak, SE.',          ttd:false, urutan:2},
+  {jabatan:'Sekretaris',       nama:'Roni Linga',                          ttd:true,  urutan:3},
+  {jabatan:'Wakil Sekretaris', nama:'Richard Fernando Sinaga',             ttd:false, urutan:4},
+  {jabatan:'Bendahara',        nama:'St. Meriana Elpe br. Saragih, Msn.', ttd:false, urutan:5},
 ];
 
-// Muat dari localStorage atau gunakan default
-function muatDataPengurus(){
-  try{
-    const saved=localStorage.getItem('pengurus_tsbp');
-    return saved?JSON.parse(saved):JSON.parse(JSON.stringify(PENGURUS_DEFAULT));
-  }catch(e){return JSON.parse(JSON.stringify(PENGURUS_DEFAULT));}
+// Seed pengurus default ke DB jika kosong
+async function seedPengurus(){
+  const{data,error}=await db.from(CFG.tabelPengurus).insert(PENGURUS_DEFAULT).select();
+  if(!error&&data) pengurusDB=data;
 }
-function simpanDataPengurus(data){
-  localStorage.setItem('pengurus_tsbp',JSON.stringify(data));
+
+// Ambil data pengurus (dari cache)
+function muatDataPengurus(){
+  return pengurusDB.length?pengurusDB:JSON.parse(JSON.stringify(PENGURUS_DEFAULT));
 }
 
 function renderPengurus(){
@@ -1863,19 +1872,34 @@ function renderPengurus(){
     </div>`).join('');
 }
 
-function simpanPengurus(){
+async function simpanPengurus(){
   const data=muatDataPengurus();
-  data.forEach((p,i)=>{
+  const msg=document.getElementById('pengurus-msg');
+  msg.style.color='var(--brown)';msg.textContent='⏳ Menyimpan...';
+  let ok=true;
+  for(let i=0;i<data.length;i++){
     const inp=document.getElementById('pg-nama-'+i);
     const chk=document.getElementById('pg-ttd-'+i);
-    if(inp)p.nama=inp.value.trim()||p.nama;
-    if(chk)p.ttd=chk.checked;
-  });
-  simpanDataPengurus(data);
-  renderPengurus();
-  const msg=document.getElementById('pengurus-msg');
-  msg.style.color='var(--green)';msg.textContent='✓ Tersimpan!';
-  setTimeout(()=>msg.textContent='',2500);
+    if(inp) data[i].nama=inp.value.trim()||data[i].nama;
+    if(chk) data[i].ttd=chk.checked;
+    if(data[i].id){
+      // Update existing row
+      const{error}=await db.from(CFG.tabelPengurus)
+        .update({nama:data[i].nama,ttd:data[i].ttd})
+        .eq('id',data[i].id);
+      if(error){ok=false;console.error('Update pengurus error:',error.message);}
+    }
+  }
+  if(ok){
+    // Reload dari DB
+    const{data:fresh}=await db.from(CFG.tabelPengurus).select('*').order('urutan');
+    if(fresh) pengurusDB=fresh;
+    renderPengurus();
+    msg.style.color='var(--green)';msg.textContent='✓ Tersimpan ke database!';
+    setTimeout(()=>msg.textContent='',3000);
+  } else {
+    msg.style.color='var(--red)';msg.textContent='❌ Ada error, coba lagi';
+  }
 }
 
 // Print PDF daftar pengurus
