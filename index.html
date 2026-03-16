@@ -1606,12 +1606,9 @@ function printTTDKehadiran(){
     {content:'No',styles:{halign:'center',fontStyle:'bold'}},
     {content:'Nama Anggota',styles:{fontStyle:'bold'}},
     {content:'Alamat',styles:{fontStyle:'bold'}},
-    {content:'Total
-Hadir
-'+tahun,styles:{halign:'center',fontStyle:'bold',fontSize:6}},
+    {content:'Total Hadir '+tahun,styles:{halign:'center',fontStyle:'bold',fontSize:6}},
     ...jt.sort((a,b)=>a.nomor-b.nomor).slice(0,maxTTD).map(j=>({
-      content:'P'+j.nomor+'
-'+((j.tanggal||'').split(' ').slice(-2,-1)[0]||''),
+      content:'P'+j.nomor+'\n'+((j.tanggal||'').split(' ').slice(-2,-1)[0]||''),
       styles:{halign:'center',fontStyle:'bold',fontSize:6}
     })),
   ];
@@ -1717,14 +1714,7 @@ async function hapusSemualDataRekap(){
   if(!jt.length){showToast('Tidak ada jadwal untuk tahun ini');return;}
   const totalRec=allAbsen.filter(ab=>jt.some(j=>j.tanggal===ab.tanggal_acara)).length;
   if(totalRec===0){showToast('ℹ️ Tidak ada data absensi untuk tahun '+tahun);return;}
-  if(!confirm(`⚠️ PERINGATAN!
-
-Ini akan MENGHAPUS ${totalRec} data absensi tahun ${tahun}.
-
-Semua centang kehadiran rekap akan hilang permanen.
-Data anggota TIDAK dihapus.
-
-Lanjutkan?`))return;
+  if(!confirm('⚠️ PERINGATAN!\n\nIni akan MENGHAPUS '+totalRec+' data absensi tahun '+tahun+'.\n\nSemua centang kehadiran rekap akan hilang permanen.\nData anggota TIDAK dihapus.\n\nLanjutkan?'))return;
   if(!confirm(`Konfirmasi terakhir:
 Hapus ${totalRec} data absensi tahun ${tahun}?`))return;
   // Hapus per tanggal partonggoan
