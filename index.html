@@ -1571,9 +1571,9 @@ function eksporRiwayatPDF(jadwalId){
   y+=10;
   const galanganStr=j.galangan?'Rp '+Number(j.galangan).toLocaleString('id-ID'):'—';
   const stats=[
-    {lbl:'Total Anggota',val:String(allAnggota.length),bg:[249,245,240]},
-    {lbl:'Absen Hadir',val:String(jmlHadir),bg:[232,245,233]},
-    {lbl:'Absen Ijin',val:String(jmlIjin),bg:[253,237,236]},
+    {lbl:'Total Anggota TSBP',val:String(allAnggota.length),bg:[249,245,240]},
+    {lbl:'Absen Hadir Anggota',val:String(jmlHadir),bg:[232,245,233]},
+    {lbl:'Absen Ijin Anggota',val:String(jmlIjin),bg:[253,237,236]},
     {lbl:'Jumlah Yang Hadir',val:jumlahOrang+' orang',bg:[254,249,236]},
   ];
   const boxW=(cw-9)/4;let bx=margin;
