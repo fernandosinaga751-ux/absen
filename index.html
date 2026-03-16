@@ -1238,9 +1238,7 @@ async function klikDotHadir(ev, anggotaId, namA, tanggalAcara, sudahHadir){
     allAbsen=allAbsen.filter(ab=>ab.id!==rec.id);
     showToast('↩ Kehadiran dibatalkan');
   } else {
-    // Tambah record — TANPA no_hp untuk hindari unique constraint daftar_hadir_no_hp_key
-    const ang=allAnggota.find(a=>a.id===anggotaId);
-    // Cek duplikat dulu
+    // Tambah record — cek duplikat dulu
     const{data:cek,error:cekErr}=await db.from(CFG.tabelAbsen)
       .select('id,nama,tanggal_acara,anggota_id,jumlah,waktu,no_hp,nama_acara')
       .eq('anggota_id',anggotaId).eq('tanggal_acara',tanggalAcara).maybeSingle();
@@ -1251,9 +1249,12 @@ async function klikDotHadir(ev, anggotaId, namA, tanggalAcara, sudahHadir){
       dot.style.opacity='1';dot.style.pointerEvents='auto';
       muatRekap();return;
     }
-    // Insert baru — tanpa no_hp (hindari unique constraint)
+    // Insert baru — no_hp diambil dari data anggota (NOT NULL di DB)
+    const ang=allAnggota.find(a=>a.id===anggotaId);
+    const noHp=ang?.no_hp||'';
     const obj={
       nama:namA,
+      no_hp:noHp,
       jumlah:1,
       nama_acara:CFG.namaAcara,
       tanggal_acara:tanggalAcara,
@@ -1303,8 +1304,9 @@ async function simpanEditKehadiran(){
         allAbsen.push({...cek, nama:ekAnggotaNama, tanggal_acara:j.tanggal, anggota_id:ekAnggotaId});
         continue;
       }
+      const angMod=allAnggota.find(a=>a.id===ekAnggotaId);
       const{data,error}=await db.from(CFG.tabelAbsen).insert({
-        nama:ekAnggotaNama, jumlah:1,
+        nama:ekAnggotaNama, no_hp:angMod?.no_hp||'', jumlah:1,
         nama_acara:CFG.namaAcara, tanggal_acara:j.tanggal, anggota_id:ekAnggotaId
       }).select().single();
       if(!error&&data){allAbsen.push(data);changed++;}
