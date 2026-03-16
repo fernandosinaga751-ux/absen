@@ -508,13 +508,25 @@ table.data-tbl td.center{text-align:center;}
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--brown);margin-bottom:10px">📊 Statistik Kehadiran</div>
       <div id="mer-stats"></div>
       <div style="margin-top:14px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--brown);margin-bottom:8px">Edit Jumlah &amp; Keterangan:</div>
-        <div class="form-grid-3">
-          <div class="field"><label>Absen Hadir</label><input type="number" id="mer-hadir" min="0" placeholder="0"/></div>
-          <div class="field"><label>Absen Ijin</label><input type="number" id="mer-ijin" min="0" placeholder="0"/></div>
-          <div class="field"><label>Jumlah Hadir (Orang)</label><input type="number" id="mer-jumlah" min="0" placeholder="0"/></div>
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--brown);margin-bottom:8px">Input Kehadiran:</div>
+        <div class="form-grid-2" style="margin-bottom:12px">
+          <div class="field">
+            <label>✅ Total Yang Hadir (orang)</label>
+            <input type="number" id="mer-jumlah" min="0" placeholder="0"
+              style="font-size:18px;font-weight:700;text-align:center"
+              oninput="autoHitungAbsen(this)"/>
+            <div style="font-size:11px;color:#AAA;margin-top:4px">Isi jumlah orang yang hadir</div>
+          </div>
+          <div class="field">
+            <label>❌ Absen / Tidak Hadir</label>
+            <input type="number" id="mer-ijin" min="0" placeholder="0"
+              style="font-size:18px;font-weight:700;text-align:center;background:#FEF9EC"
+              readonly/>
+            <div style="font-size:11px;color:#AAA;margin-top:4px">Otomatis = Total Anggota - Hadir</div>
+          </div>
         </div>
-        <div class="field" style="margin-top:10px">
+        <input type="hidden" id="mer-hadir"/>
+        <div class="field">
           <label>💰 Galangan (Persembahan) — Rp</label>
           <div style="position:relative">
             <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700;color:var(--brown);font-size:14px;pointer-events:none">Rp</span>
@@ -1412,25 +1424,31 @@ function bukaEditRiwayat(jadwalId){
     <span style="color:var(--red)">Absen: <b>${jmlAbsen}</b></span>
     <span style="color:var(--gold)">Total Orang: <b>${totalOrang}</b></span>
   </div>`;
-  document.getElementById('mer-hadir').value=j.stat_hadir!=null?j.stat_hadir:jmlHadir;
-  document.getElementById('mer-ijin').value=j.stat_ijin!=null?j.stat_ijin:jmlAbsen;
-  document.getElementById('mer-jumlah').value=j.stat_jumlah!=null?j.stat_jumlah:totalOrang;
+  const jumlahVal=j.stat_jumlah!=null?j.stat_jumlah:totalOrang;
+  const absenVal=Math.max(0,allAnggota.length-jumlahVal);
+  document.getElementById('mer-jumlah').value=jumlahVal;
+  document.getElementById('mer-ijin').value=absenVal;
+  document.getElementById('mer-hadir').value=jumlahVal;
   setRupiahValue('mer-galangan',j.galangan||0);
   openModal('m-edit-riwayat');
 }
 async function simpanEditRiwayat(){
   const id=document.getElementById('mer-id').value;
   const idx=jadwalList.findIndex(x=>x.id===id);if(idx<0)return;
+  const jumlah=parseInt(document.getElementById('mer-jumlah').value)||0;
+  const absen=Math.max(0,allAnggota.length-jumlah);
   const upd={
-    stat_hadir:parseInt(document.getElementById('mer-hadir').value)||0,
-    stat_ijin:parseInt(document.getElementById('mer-ijin').value)||0,
-    stat_jumlah:parseInt(document.getElementById('mer-jumlah').value)||0,
+    stat_hadir:jumlah,
+    stat_ijin:absen,
+    stat_jumlah:jumlah,
     galangan:getRupiahValue('mer-galangan'),
   };
   const{data,error}=await db.from(CFG.tabelJadwal).update(upd).eq('id',id).select().single();
   if(error){showToast('❌ Gagal: '+error.message);return;}
   jadwalList[idx]={...jadwalList[idx],...data};
-  closeModal('m-edit-riwayat');muatRiwayat();showToast('✅ Riwayat diperbarui!');
+  closeModal('m-edit-riwayat');
+  muatRiwayat();muatRekap();renderJadwal();
+  showToast('✅ Riwayat diperbarui & Rekap diupdate!');
 }
 
 // ═══ EXPORT RIWAYAT PDF — tanpa nama2 anggota ═══
@@ -1551,139 +1569,124 @@ function eksporRiwayatPDF(jadwalId){
 
 // ═══ EXPORT EXCEL & PPT ═══
 // ═══ PRINT TTD KEHADIRAN ═══
-// PDF F4 portrait: 215 x 330 mm, tabel No/Nama/Alamat/Total/TTD
+// PDF F4 Portrait (215x330mm) — 1 kolom TTD = Partonggoan BERIKUTNYA
 function printTTDKehadiran(){
   if(!allAnggota.length){showToast('Belum ada anggota!');return;}
   const{jsPDF}=window.jspdf;
-  // F4 portrait: 215 x 330 mm
   const PW=215, PH=330;
   const doc=new jsPDF({orientation:'portrait',format:[PW,PH],unit:'mm'});
   const MX=12, MY=8, CW=PW-MX*2;
   const tahun=new Date().getFullYear();
   const tglCetak=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
 
+  // Cari partonggoan BERIKUTNYA yang belum terlaksana
+  const jtAll=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
+  const berikutnya=jtAll.find(j=>!allAbsen.some(ab=>ab.tanggal_acara===j.tanggal)&&j.stat_hadir==null);
+  const ttdLabel=berikutnya
+    ?'Partonggoan '+berikutnya.nomor+' ('+((berikutnya.tanggal||'').split(', ').slice(-1)[0]||berikutnya.tanggal||'')+')'
+    :'Partonggoan Berikutnya';
+
   // ── HEADER ──
   doc.setFillColor(61,43,31);
-  doc.rect(MX,MY,CW,32,'F');
+  doc.rect(MX,MY,CW,34,'F');
   doc.setFillColor(196,154,74);
   doc.rect(MX,MY,CW,2.5,'F');
-  doc.rect(MX,MY+32-2,CW,2,'F');
-  // Ornamen
-  [5,10,15].forEach(d=>{doc.setFillColor(196,154,74);doc.circle(MX+d,MY+16,0.7,'F');doc.circle(MX+CW-d,MY+16,0.7,'F');});
+  doc.rect(MX,MY+34-2,CW,2,'F');
+  [5,10,15].forEach(d=>{doc.setFillColor(196,154,74);doc.circle(MX+d,MY+18,0.8,'F');doc.circle(MX+CW-d,MY+18,0.8,'F');});
   doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(196,154,74);
   doc.text('PERSEKUTUAN KELUARGA SUMBAYAK',PW/2,MY+7,{align:'center'});
-  doc.setFontSize(14);doc.text('DAFTAR TANDA TANGAN KEHADIRAN',PW/2,MY+16,{align:'center'});
+  doc.setFontSize(15);doc.text('DAFTAR TANDA TANGAN KEHADIRAN',PW/2,MY+17,{align:'center'});
   doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(220,205,180);
-  doc.text(CFG.namaAcara,PW/2,MY+23,{align:'center'});
+  doc.text(CFG.namaAcara,PW/2,MY+24,{align:'center'});
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(196,154,74);
-  doc.text('TAHUN '+tahun,PW/2,MY+30,{align:'center'});
+  doc.text('TAHUN '+tahun,PW/2,MY+31,{align:'center'});
 
-  let y=MY+36;
+  let y=MY+38;
 
   // ── Info strip ──
-  doc.setFillColor(249,245,238);doc.rect(MX,y,CW,8,'F');
-  doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.rect(MX,y,CW,8,'S');
-  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(100,70,40);
-  doc.text('Total Anggota: '+allAnggota.length+'   ·   Dicetak: '+tglCetak,PW/2,y+5.5,{align:'center'});
-  y+=11;
+  doc.setFillColor(249,245,238);doc.rect(MX,y,CW,12,'F');
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.3);doc.rect(MX,y,CW,12,'S');
+  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(100,70,40);
+  doc.text('Total Anggota: '+allAnggota.length,MX+6,y+5);
+  doc.text('TTD untuk: '+ttdLabel,MX+6,y+10);
+  doc.setFont('helvetica','normal');doc.setTextColor(140,110,70);
+  doc.text('Dicetak: '+tglCetak,MX+CW-6,y+10,{align:'right'});
+  y+=16;
 
-  // ── Hitung total hadir per anggota untuk tahun ini ──
-  const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun)));
-
-  // ── TABEL dengan autoTable ──
-  // Kolom: No(8) | Nama(52) | Alamat(48) | Total Hadir(18) | TTD 1(14) | TTD 2(14) | ... sesuai jumlah partonggoan
-  // Karena TTD per partonggoan bisa banyak, buat kolom TTD dinamis berdasarkan jumlah partonggoan
-  // Max 12 kolom TTD agar muat di F4
-
-  const maxTTD=Math.min(jt.length,12);
-  const noW=8, namaW=50, alamatW=44, totalW=14;
-  const ttdW=Math.max(10, Math.floor((CW-noW-namaW-alamatW-totalW)/Math.max(maxTTD,1)));
-  // Recalculate if too wide
-  const actualTTDW=maxTTD>0?Math.min(ttdW,16):16;
-
-  // Build header
-  const headCols=[
-    {content:'No',styles:{halign:'center',fontStyle:'bold'}},
-    {content:'Nama Anggota',styles:{fontStyle:'bold'}},
-    {content:'Alamat',styles:{fontStyle:'bold'}},
-    {content:'Total Hadir '+tahun,styles:{halign:'center',fontStyle:'bold',fontSize:6}},
-    ...jt.sort((a,b)=>a.nomor-b.nomor).slice(0,maxTTD).map(j=>({
-      content:'P'+j.nomor+'\n'+((j.tanggal||'').split(' ').slice(-2,-1)[0]||''),
-      styles:{halign:'center',fontStyle:'bold',fontSize:6}
-    })),
-  ];
+  // ── KOLOM: No(8) | Nama(62) | Alamat(56) | Total Hadir(16) | TTD(49) ──
+  const noW=8, namaW=62, alamatW=56, totalW=16, ttdW=CW-noW-namaW-alamatW-totalW;
 
   const bodyRows=allAnggota.map((a,i)=>{
-    const tot=jt.reduce((s,j)=>s+(cekHadirLocal(a.id,a.nama,j.tanggal)?1:0),0);
+    const tot=jtAll.reduce((s,j)=>s+(cekHadirLocal(a.id,a.nama,j.tanggal)?1:0),0);
     return [
-      {content:String(a.urutan||i+1),styles:{halign:'center',textColor:[139,94,60],fontStyle:'bold',fontSize:8}},
-      {content:a.nama,styles:{fontStyle:'bold',fontSize:8}},
-      {content:a.alamat||'—',styles:{fontSize:7,textColor:[100,80,60]}},
-      {content:String(tot)+'x',styles:{halign:'center',fontStyle:'bold',fontSize:8,textColor:[90,122,92]}},
-      ...jt.sort((a2,b2)=>a2.nomor-b2.nomor).slice(0,maxTTD).map(()=>({
-        content:'',
-        styles:{minCellHeight:14} // ruang untuk TTD
-      })),
+      {content:String(a.urutan||i+1),styles:{halign:'center',textColor:[139,94,60],fontStyle:'bold',fontSize:9}},
+      {content:a.nama,styles:{fontStyle:'bold',fontSize:9}},
+      {content:a.alamat||'—',styles:{fontSize:8,textColor:[100,80,60]}},
+      {content:tot+'x',styles:{halign:'center',fontStyle:'bold',fontSize:9,textColor:[90,122,92]}},
+      {content:'',styles:{minCellHeight:20}},
     ];
-  });
-
-  // Column widths
-  const colStyles={
-    0:{cellWidth:noW,halign:'center'},
-    1:{cellWidth:namaW},
-    2:{cellWidth:alamatW},
-    3:{cellWidth:totalW,halign:'center'},
-  };
-  jt.sort((a,b)=>a.nomor-b.nomor).slice(0,maxTTD).forEach((_,i)=>{
-    colStyles[i+4]={cellWidth:actualTTDW,halign:'center'};
   });
 
   doc.autoTable({
     startY:y,
     margin:{left:MX,right:MX},
     tableWidth:CW,
-    head:[headCols],
+    head:[[
+      {content:'No',styles:{halign:'center'}},
+      {content:'Nama Anggota'},
+      {content:'Alamat'},
+      {content:'Total\nHadir\n'+tahun,styles:{halign:'center',fontSize:6.5}},
+      {content:'Tanda Tangan\n'+ttdLabel,styles:{halign:'center',fontSize:7}},
+    ]],
     body:bodyRows,
-    columnStyles:colStyles,
+    columnStyles:{
+      0:{cellWidth:noW,halign:'center'},
+      1:{cellWidth:namaW},
+      2:{cellWidth:alamatW},
+      3:{cellWidth:totalW,halign:'center'},
+      4:{cellWidth:ttdW,halign:'center'},
+    },
     headStyles:{
       fillColor:[61,43,31],textColor:[196,154,74],
-      fontSize:7,fontStyle:'bold',
-      cellPadding:2,lineWidth:0.2,lineColor:[80,56,40],
+      fontSize:8,fontStyle:'bold',
+      cellPadding:{top:3,bottom:3,left:2,right:2},
+      lineWidth:0.2,lineColor:[80,56,40],
     },
     bodyStyles:{
-      fontSize:8,textColor:[50,32,20],
-      cellPadding:{top:2,bottom:2,left:2,right:2},
+      fontSize:9,textColor:[50,32,20],
+      cellPadding:{top:3,bottom:3,left:3,right:3},
       lineColor:[210,200,185],lineWidth:0.15,
-      minCellHeight:14,
+      minCellHeight:20,
       valign:'middle',
     },
     alternateRowStyles:{fillColor:[251,247,238]},
     styles:{overflow:'linebreak',valign:'middle'},
     theme:'grid',
     didDrawPage:(data)=>{
-      if(data.pageNumber>1){
-        doc.setFillColor(61,43,31);doc.rect(0,0,PW,7,'F');
+      const pg=data.pageNumber;
+      doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(180,155,120);
+      doc.text('Hal. '+pg,PW-MX,PH-5,{align:'right'});
+      if(pg>1){
+        doc.setFillColor(61,43,31);doc.rect(MX,MY,CW,7,'F');
         doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(196,154,74);
-        doc.text('DAFTAR TTD KEHADIRAN '+tahun+' — '+CFG.namaAcara,PW/2,5,{align:'center'});
+        doc.text('DAFTAR TTD '+tahun+' — '+CFG.namaAcara,PW/2,MY+5,{align:'center'});
       }
     },
   });
 
   // ── FOOTER ──
-  const fy=doc.lastAutoTable.finalY+5;
-  if(fy<PH-20){
-    doc.setDrawColor(196,154,74);doc.setLineWidth(0.4);doc.line(MX,fy,PW-MX,fy);
-    doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(160,130,100);
-    doc.text('"Marilah kita saling mengasihi"',PW/2,fy+4,{align:'center'});
-    doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(180,155,120);
-    doc.text(CFG.namaAcara+'  ·  Tahun '+tahun+'  ·  Dicetak: '+tglCetak,PW/2,fy+8,{align:'center'});
-  }
+  const fy=Math.min(doc.lastAutoTable.finalY+6,PH-16);
+  doc.setDrawColor(196,154,74);doc.setLineWidth(0.5);doc.line(MX,fy,PW-MX,fy);
+  doc.setFont('helvetica','italic');doc.setFontSize(7.5);doc.setTextColor(160,130,100);
+  doc.text('"Marilah kita saling mengasihi sebagaimana Kristus mengasihi kita"',PW/2,fy+4,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(180,155,120);
+  doc.text(CFG.namaAcara+'  ·  Tahun '+tahun+'  ·  Dicetak: '+tglCetak,PW/2,fy+9,{align:'center'});
 
-  doc.save('TTD_Kehadiran_'+tahun+'.pdf');
+  doc.save('TTD_Kehadiran_'+tahun+(berikutnya?'_P'+berikutnya.nomor:'')+'.pdf');
   showToast('✅ Print TTD berhasil diunduh!');
 }
 
-// Helper cek hadir tanpa parameter global
+// Helper cek hadir lokal
 function cekHadirLocal(anggotaId, namA, tanggal){
   return allAbsen.some(ab=>
     (ab.anggota_id===anggotaId||(ab.nama&&ab.nama.toLowerCase()===namA.toLowerCase()))
@@ -1806,6 +1809,14 @@ async function eksporPowerPoint(){
   }
   s4.addText(`Generated: ${tgl}  ·  ${CFG.namaAcara}`,{x:.4,y:4.6,w:12.5,fontSize:9,color:'555555',align:'center',fontFace:'Lato'});
   await pptx.writeFile({fileName:`Rekap_Partonggoan_${tahun}.pptx`});showToast('✅ PowerPoint diunduh!');
+}
+
+// Auto hitung absen dari input jumlah hadir
+function autoHitungAbsen(input){
+  const hadir=parseInt(input.value)||0;
+  const absen=Math.max(0,allAnggota.length-hadir);
+  document.getElementById('mer-ijin').value=absen;
+  document.getElementById('mer-hadir').value=hadir;
 }
 
 // ── Format Rupiah ──
