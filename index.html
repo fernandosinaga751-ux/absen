@@ -1802,16 +1802,18 @@ Hapus ${totalRec} data absensi tahun ${tahun}?`))return;
 
 // ═══ PENGURUS ═══
 const PENGURUS_DEFAULT = [
-  {jabatan:'Ketua',            nama:'St. Salmek Sumbayak, SH., MH',      ttd:true,  urutan:1},
-  {jabatan:'Wakil Ketua',      nama:'St. Jhon Ray Sumbayak, SE.',          ttd:false, urutan:2},
-  {jabatan:'Sekretaris',       nama:'Roni Linga',                          ttd:true,  urutan:3},
-  {jabatan:'Wakil Sekretaris', nama:'Richard Fernando Sinaga',             ttd:false, urutan:4},
-  {jabatan:'Bendahara',        nama:'St. Meriana Elpe br. Saragih, Msn.', ttd:false, urutan:5},
+  {jabatan:'Ketua',            nama:'St. Salmek Sumbayak, SH., MH',      no_hp:'',  ttd:true,  urutan:1},
+  {jabatan:'Wakil Ketua',      nama:'St. Jhon Ray Sumbayak, SE.',          no_hp:'',  ttd:false, urutan:2},
+  {jabatan:'Sekretaris',       nama:'Roni Linga',                          no_hp:'',  ttd:true,  urutan:3},
+  {jabatan:'Wakil Sekretaris', nama:'Richard Fernando Sinaga',             no_hp:'',  ttd:false, urutan:4},
+  {jabatan:'Bendahara',        nama:'St. Meriana Elpe br. Saragih, Msn.', no_hp:'',  ttd:false, urutan:5},
 ];
 
 // Seed pengurus default ke DB jika kosong
 async function seedPengurus(){
-  const{data,error}=await db.from(CFG.tabelPengurus).insert(PENGURUS_DEFAULT).select();
+  // Pastikan field no_hp ada di setiap baris default
+  const rows=PENGURUS_DEFAULT.map(p=>({...p, no_hp:p.no_hp||''}));
+  const{data,error}=await db.from(CFG.tabelPengurus).insert(rows).select();
   if(!error&&data) pengurusDB=data;
 }
 
@@ -1830,20 +1832,25 @@ function renderPengurus(){
       </div>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700;color:var(--dark)">${p.nama}</div>
+        ${p.no_hp?'<div style="font-size:12px;color:#888;margin-top:2px">📱 '+p.no_hp+'</div>':''}
       </div>
       ${p.ttd?'<span style="background:var(--green-light);color:var(--green);font-size:10px;font-weight:700;padding:2px 9px;border-radius:6px">✓ TTD</span>':''}
     </div>`).join('');
-  // Form edit
+  // Form edit — 3 kolom: Nama | No HP | TTD checkbox
   document.getElementById('pengurus-form').innerHTML=data.map((p,i)=>`
-    <div class="form-grid-2" style="margin-bottom:8px">
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #F0F2F5">
       <div class="field" style="margin:0">
-        <label>${p.jabatan}</label>
-        <input type="text" id="pg-nama-${i}" value="${p.nama.replace(/"/g,'&quot;')}" placeholder="${p.jabatan}..."/>
+        <label>${p.jabatan} — Nama</label>
+        <input type="text" id="pg-nama-${i}" value="${p.nama.replace(/"/g,'&quot;')}" placeholder="Nama lengkap..."/>
       </div>
-      <div class="field" style="margin:0;justify-content:flex-end;padding-top:22px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;font-weight:700;color:var(--brown)">
+      <div class="field" style="margin:0">
+        <label>No. HP / WA</label>
+        <input type="tel" id="pg-hp-${i}" value="${(p.no_hp||'').replace(/"/g,'&quot;')}" placeholder="08xxxxxxxxxx" inputmode="numeric"/>
+      </div>
+      <div class="field" style="margin:0;padding-bottom:4px">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;font-weight:700;color:var(--brown);white-space:nowrap">
           <input type="checkbox" id="pg-ttd-${i}" ${p.ttd?'checked':''} style="width:15px;height:15px;accent-color:var(--green)"/>
-          Tandatangan di PDF
+          Tanda Tangan PDF
         </label>
       </div>
     </div>`).join('');
@@ -1856,13 +1863,15 @@ async function simpanPengurus(){
   let ok=true;
   for(let i=0;i<data.length;i++){
     const inp=document.getElementById('pg-nama-'+i);
+    const inpHp=document.getElementById('pg-hp-'+i);
     const chk=document.getElementById('pg-ttd-'+i);
-    if(inp) data[i].nama=inp.value.trim()||data[i].nama;
-    if(chk) data[i].ttd=chk.checked;
+    if(inp)   data[i].nama  = inp.value.trim()  || data[i].nama;
+    if(inpHp) data[i].no_hp = inpHp.value.trim().replace(/[^\d+]/g,'');
+    if(chk)   data[i].ttd   = chk.checked;
     if(data[i].id){
       // Update existing row
       const{error}=await db.from(CFG.tabelPengurus)
-        .update({nama:data[i].nama,ttd:data[i].ttd})
+        .update({nama:data[i].nama, no_hp:data[i].no_hp||'', ttd:data[i].ttd})
         .eq('id',data[i].id);
       if(error){ok=false;console.error('Update pengurus error:',error.message);}
     }
@@ -1906,13 +1915,14 @@ function printDaftarPengurus(){
     startY:y,
     margin:{left:MX,right:MX},
     tableWidth:CW,
-    head:[[{content:'No',styles:{halign:'center'}},{content:'Jabatan'},{content:'Nama'}]],
+    head:[[{content:'No',styles:{halign:'center'}},{content:'Jabatan'},{content:'Nama'},{content:'No. HP',styles:{halign:'center'}}]],
     body:data.map((p,i)=>[
       {content:String(i+1),styles:{halign:'center',fontStyle:'bold',textColor:[139,94,60]}},
       {content:p.jabatan,styles:{fontStyle:'bold'}},
       {content:p.nama},
+      {content:p.no_hp||'—',styles:{halign:'center'}},
     ]),
-    columnStyles:{0:{cellWidth:14,halign:'center'},1:{cellWidth:60},2:{cellWidth:CW-14-60}},
+    columnStyles:{0:{cellWidth:12,halign:'center'},1:{cellWidth:52},2:{cellWidth:CW-12-52-32},3:{cellWidth:32,halign:'center'}},
     headStyles:{fillColor:[61,43,31],textColor:[196,154,74],fontSize:9,fontStyle:'bold',cellPadding:4},
     bodyStyles:{fontSize:10,cellPadding:5,textColor:[50,32,20]},
     alternateRowStyles:{fillColor:[251,247,238]},
