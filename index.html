@@ -1052,7 +1052,7 @@ function eksporJadwalPDF(){
   // ── FONT & PADDING (font 6.5pt, border proporsional) ──
   const FONT_HEAD = 7;
   const FONT_BODY = 6.5;
-  const FONT_PGRS = 10;
+  const FONT_PGRS = 7.5;
   const CP = {top:1.8, bottom:1.8, left:1.5, right:1.5};
   const LW = 0.2; // lineWidth proporsional font 6.5
 
@@ -1090,7 +1090,7 @@ function eksporJadwalPDF(){
   // ── STRIP INFO ──
   doc.setFillColor(249,245,238);doc.rect(MX,y,CW,STRIP_H,'F');
   doc.setDrawColor(196,154,74);doc.setLineWidth(0.25);doc.rect(MX,y,CW,STRIP_H,'S');
-  doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(100,70,40);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor(100,70,40);
   doc.text('Total: '+sorted.length+'  ·  Terlaksana: '+terlaksana+'  ·  Belum: '+(sorted.length-terlaksana)+'  ·  Dicetak: '+tglCetak,PW/2,y+4.8,{align:'center'});
   y+=STRIP_H+2;
 
@@ -1164,7 +1164,7 @@ function eksporJadwalPDF(){
   // ── DAFTAR PENGURUS — tanpa kolom, teks langsung ──
   // Sub-header
   doc.setFillColor(255,255,255);doc.rect(MX,y,CW,7,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(61,43,31);
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(61,43,31);
   doc.text('DAFTAR PENGURUS — TUMPUAN SUMBAYAK BORU PAKON PANOGOLAN — MEDAN TIMUR SEKITARNYA',PW/2,y+4.8,{align:'center'});
   y+=9;
 
