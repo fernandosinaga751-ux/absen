@@ -829,15 +829,9 @@ const db = createClient(CFG.supabaseUrl, CFG.supabaseKey);
 
 let allAnggota=[], allAbsen=[], jadwalList=[], importData=[], pengurusDB=[], allIuran=[];
 let ekAnggotaId=null, ekAnggotaNama=null, ekTahun=null, ekJadwal=[];
-let currentRole='sekretaris'; // 'sekretaris' | 'bendahara'
+let currentRole='sekretaris';
 let selectedLoginRole='sekretaris';
 let timerInterval=null, timerSisa=600;
-
-const {createClient} = supabase;
-const db = createClient(CFG.supabaseUrl, CFG.supabaseKey);
-
-let allAnggota=[], allAbsen=[], jadwalList=[], importData=[], pengurusDB=[];
-let ekAnggotaId=null, ekAnggotaNama=null, ekTahun=null, ekJadwal=[];
 
 // ═══ INIT ═══
 async function init(){
