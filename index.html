@@ -970,14 +970,28 @@ let timerInterval=null, timerSisa=600;
 
 // ═══ INIT ═══
 async function init(){
+  // Safety: force hide loading after 15 detik
+  const safetyTimer=setTimeout(()=>{
+    const ls=document.getElementById('loading-screen');
+    if(ls&&ls.style.display!=='none'){
+      ls.innerHTML=`<div style="text-align:center;padding:30px;color:white">
+        <div style="font-size:36px;margin-bottom:14px">⚠️</div>
+        <div style="margin-bottom:8px;font-size:16px;font-weight:700">Koneksi lambat atau timeout</div>
+        <div style="margin-bottom:16px;opacity:.7;font-size:13px">Periksa koneksi internet Anda</div>
+        <button onclick="location.reload()" style="padding:10px 24px;background:var(--gold);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700">🔄 Coba Lagi</button>
+        <br><br><button onclick="paksaLogin()" style="padding:8px 18px;background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.3);border-radius:9px;cursor:pointer;font-size:12px">Masuk tanpa data</button>
+      </div>`;
+    }
+  },12000);
   try{
-    // Cek sesi token aktif (untuk halaman input, tahan refresh)
+    // Cek sesi token aktif
     const tokenOk=sessionStorage.getItem('token_ok');
     const tokenTime=parseInt(sessionStorage.getItem('token_time')||'0');
     const tokenElapsed=Math.floor((Date.now()-tokenTime)/1000);
     if(tokenOk==='1'&&tokenElapsed<600){
       timerSisa=600-tokenElapsed;
       await loadPublicData();
+      clearTimeout(safetyTimer);
       document.getElementById('loading-screen').style.display='none';
       showInputToken();
       tampilFormToken();
@@ -989,15 +1003,27 @@ async function init(){
     if(sess==='sekretaris'||sess==='bendahara'){
       currentRole=sess;
       await loadAllData();
+      clearTimeout(safetyTimer);
       showAdmin(currentRole);
     } else {
+      clearTimeout(safetyTimer);
+      document.getElementById('loading-screen').style.display='none';
       document.getElementById('page-login').style.display='flex';
     }
   }catch(e){
-    document.getElementById('loading-screen').innerHTML=`<div style="text-align:center;padding:30px;color:white"><div style="font-size:36px;margin-bottom:14px">⚠️</div><div style="margin-bottom:16px;opacity:.7">${e.message}</div><button onclick="location.reload()" style="padding:10px 24px;background:var(--gold);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700">🔄 Coba Lagi</button></div>`;
+    clearTimeout(safetyTimer);
+    console.error('Init error:',e);
+    document.getElementById('loading-screen').innerHTML=`<div style="text-align:center;padding:30px;color:white"><div style="font-size:36px;margin-bottom:14px">⚠️</div><div style="margin-bottom:8px;font-weight:700">${e.message}</div><button onclick="location.reload()" style="padding:10px 24px;background:var(--gold);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;margin-top:12px">🔄 Coba Lagi</button></div>`;
     return;
   }
+  clearTimeout(safetyTimer);
   document.getElementById('loading-screen').style.display='none';
+}
+
+function paksaLogin(){
+  clearTimeout(window._safetyTimer);
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('page-login').style.display='flex';
 }
 
 // ═══ ROLE SELECTOR (stub — tidak perlu UI) ═══
@@ -1090,22 +1116,19 @@ function showAdmin(role){
 }
 
 async function loadAllData(){
-  const queries=[
+  const[r1,r2,r3,r4]=await Promise.all([
     db.from(CFG.tabelAnggota).select('*').order('urutan,nama'),
     db.from(CFG.tabelAbsen).select('*').order('waktu',{ascending:false}),
     db.from(CFG.tabelJadwal).select('*').order('nomor'),
     db.from(CFG.tabelPengurus).select('*').order('urutan'),
-  ];
-  // Coba load iuran (tabel mungkin belum ada)
-  const[r1,r2,r3,r4]=await Promise.all(queries);
+  ]);
   allAnggota=r1.data||[];
   allAbsen=r2.data||[];
   jadwalList=r3.data||[];
   pengurusDB=r4.data||[];
   if(!jadwalList.length) await seedJadwal();
   if(!pengurusDB.length) await seedPengurus();
-  // Load iuran optional
-  try{const{data}=await db.from(CFG.tabelIuran).select('*');allIuran=data||[];}catch(e){allIuran=[];}
+  try{const{data}=await db.from(CFG.tabelIuran).select('*');allIuran=data||[];}catch(e){allIuran=[];console.warn('iuran_anggota not ready');}
 }
 
 async function loadPublicData(){
@@ -3302,8 +3325,8 @@ async function bEksporKeuangan(){
 const _origLoadAllData=loadAllData;
 async function loadAllDataWithExtra(){
   await _origLoadAllData();
-  try{const{data}=await db.from('b_history').select('*').order('waktu',{ascending:false}).limit(200);allHistory=data||[];}catch(e){allHistory=[];}
-  try{const{data}=await db.from('b_keuangan').select('*').order('created_at',{ascending:true});allKeuanganDB=data||[];}catch(e){allKeuanganDB=[];}
+  try{const{data}=await db.from('b_history').select('*').order('waktu',{ascending:false}).limit(200);allHistory=data||[];}catch(e){allHistory=[];console.warn('b_history not ready:',e.message);}
+  try{const{data}=await db.from('b_keuangan').select('*').order('created_at',{ascending:true});allKeuanganDB=data||[];}catch(e){allKeuanganDB=[];console.warn('b_keuangan not ready:',e.message);}
 }
 loadAllData=loadAllDataWithExtra;
 
