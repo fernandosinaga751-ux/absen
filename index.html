@@ -232,8 +232,8 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
 .chip-teal{background:var(--teal-light);color:var(--teal);}
 
 /* ── TIMER (halaman input token) ── */
-#page-input-token{display:none;min-height:100vh;background:linear-gradient(160deg,#1A3A35 0%,#2A6B5A 100%);padding:20px;flex-direction:column;align-items:center;justify-content:center;}
-#page-input-token.show{display:flex;}
+#page-input-token{display:none;min-height:100vh;background:linear-gradient(160deg,#1A3A35 0%,#2A6B5A 100%) !important;padding:20px;flex-direction:column;align-items:center;justify-content:center;}
+#page-input-token.show{display:flex !important;}
 .token-card{background:white;border-radius:20px;padding:28px;max-width:480px;width:100%;box-shadow:0 16px 50px rgba(0,0,0,.25);margin-bottom:14px;}
 .token-card h2{font-family:'Playfair Display',serif;font-size:18px;color:var(--dark);margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--teal-light);}
 .timer-strip{background:#1A3A35;border-radius:10px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;max-width:480px;width:100%;}
@@ -260,17 +260,18 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
 <div id="page-login" style="display:none">
   <div class="login-card fade-in">
     <div class="login-logo" id="login-logo">⛪</div>
-    <h1 id="login-title">Admin Panel</h1>
+    <h1>Panel Admin</h1>
     <p>Partonggoan TSBP Medan Timur</p>
-    <!-- Role selector -->
-    <div style="display:flex;gap:8px;margin-bottom:18px;">
-      <button id="btn-role-sek" onclick="pilihRole('sekretaris')" style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--gold);background:linear-gradient(135deg,var(--dark),#6B3F2A);color:white;font-weight:700;font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;">⛪ Sekretaris</button>
-      <button id="btn-role-ben" onclick="pilihRole('bendahara')" style="flex:1;padding:10px;border-radius:10px;border:2px solid transparent;background:#F0F2F5;color:#888;font-weight:700;font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;">💰 Bendahara</button>
-      <button id="btn-role-inp" onclick="pilihRole('input')" style="flex:1;padding:10px;border-radius:10px;border:2px solid transparent;background:#F0F2F5;color:#888;font-weight:700;font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;">🔑 Input</button>
-    </div>
     <input type="password" id="login-pass" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="login-btn" id="login-btn" onclick="doLogin()">🔐 Masuk</button>
     <div class="login-err" id="login-err">❌ Password salah. Coba lagi.</div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #F0EDE8;text-align:left">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#CCC;margin-bottom:8px">Akses</div>
+      <div style="font-size:11px;color:#AAA;line-height:2">
+        ⛪ Sekretaris &nbsp;·&nbsp; 💰 Bendahara &nbsp;·&nbsp; 🔑 Input Iuran<br>
+        <span style="font-size:10px;color:#DDD">Password menentukan akses otomatis</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -836,20 +837,20 @@ let timerInterval=null, timerSisa=600;
 // ═══ INIT ═══
 async function init(){
   try{
-    // Cek URL param untuk halaman input token
-    const url=new URL(location.href);
+    // Cek sesi token aktif (untuk halaman input, tahan refresh)
     const tokenOk=sessionStorage.getItem('token_ok');
     const tokenTime=parseInt(sessionStorage.getItem('token_time')||'0');
     const tokenElapsed=Math.floor((Date.now()-tokenTime)/1000);
-    const isInputUrl=url.searchParams.get('input')==='1';
-    const isTokenActive=tokenOk==='1'&&tokenElapsed<600;
-
-    if(isInputUrl||isTokenActive){
+    if(tokenOk==='1'&&tokenElapsed<600){
+      timerSisa=600-tokenElapsed;
       await loadPublicData();
       document.getElementById('loading-screen').style.display='none';
       showInputToken();
+      tampilFormToken();
+      mulaiTimer();
       return;
     }
+    // Cek sesi admin
     const sess=sessionStorage.getItem('admin_ok');
     if(sess==='sekretaris'||sess==='bendahara'){
       currentRole=sess;
@@ -857,7 +858,6 @@ async function init(){
       showAdmin(currentRole);
     } else {
       document.getElementById('page-login').style.display='flex';
-      pilihRole('sekretaris');
     }
   }catch(e){
     document.getElementById('loading-screen').innerHTML=`<div style="text-align:center;padding:30px;color:white"><div style="font-size:36px;margin-bottom:14px">⚠️</div><div style="margin-bottom:16px;opacity:.7">${e.message}</div><button onclick="location.reload()" style="padding:10px 24px;background:var(--gold);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700">🔄 Coba Lagi</button></div>`;
@@ -866,74 +866,67 @@ async function init(){
   document.getElementById('loading-screen').style.display='none';
 }
 
-// ═══ ROLE SELECTOR ═══
-function pilihRole(role){
-  selectedLoginRole=role;
-  const sek=document.getElementById('btn-role-sek');
-  const ben=document.getElementById('btn-role-ben');
-  const inp=document.getElementById('btn-role-inp');
-  const logo=document.getElementById('login-logo');
-  const title=document.getElementById('login-title');
-  const btn=document.getElementById('login-btn');
-  // Reset semua
-  [sek,ben,inp].forEach(b=>{b.style.background='#F0F2F5';b.style.color='#888';b.style.borderColor='transparent';});
-  if(role==='sekretaris'){
-    sek.style.background='linear-gradient(135deg,var(--dark),#6B3F2A)';sek.style.color='white';sek.style.borderColor='var(--gold)';
-    logo.textContent='⛪';title.textContent='Sekretaris';btn.textContent='🔐 Masuk Sekretaris';
-    btn.style.background='linear-gradient(135deg,var(--dark),#6B3F2A)';
-  } else if(role==='bendahara'){
-    ben.style.background='linear-gradient(135deg,var(--teal),var(--teal-dark))';ben.style.color='white';ben.style.borderColor='var(--teal)';
-    logo.textContent='💰';title.textContent='Bendahara';btn.textContent='🔐 Masuk Bendahara';
-    btn.style.background='linear-gradient(135deg,var(--teal),var(--teal-dark))';
-  } else {
-    inp.style.background='linear-gradient(135deg,#2C5F2E,#1A3A35)';inp.style.color='white';inp.style.borderColor='var(--green)';
-    logo.textContent='🔑';title.textContent='Input Token';btn.textContent='🔑 Masuk Input';
-    btn.style.background='linear-gradient(135deg,#2C5F2E,#1A3A35)';
-  }
-  document.getElementById('login-err').style.display='none';
-  document.getElementById('login-pass').value='';
+// ═══ ROLE SELECTOR (stub — tidak perlu UI) ═══
+function pilihRole(role){ selectedLoginRole=role; }
+
+// ═══ HELPER: sembunyikan semua halaman ═══
+function sembunyikanSemua(){
+  document.getElementById('page-login').style.display='none';
+  document.getElementById('page-admin').style.display='none';
+  document.getElementById('page-input-token').classList.remove('show');
 }
 
 // ═══ AUTH ═══
 function doLogin(){
-  const p=document.getElementById('login-pass').value;
-  if(selectedLoginRole==='input'){
-    // Redirect ke halaman input token
-    if(p===CFG.tokenInput){
-      sessionStorage.setItem('token_ok','1');
-      sessionStorage.setItem('token_time',String(Date.now()));
-      timerSisa=600;
-      loadPublicData().then(()=>{
-        document.getElementById('page-login').style.display='none';
-        showInputToken();
-        tampilFormToken();
-        mulaiTimer();
-      });
-    } else {
-      document.getElementById('login-err').style.display='block';
-    }
-    return;
-  }
-  const pass=selectedLoginRole==='sekretaris'?CFG.adminPass:CFG.bendaharaPass;
-  if(p===pass){
-    currentRole=selectedLoginRole;
-    sessionStorage.setItem('admin_ok',currentRole);
+  const p=document.getElementById('login-pass').value.trim();
+  const err=document.getElementById('login-err');
+  err.style.display='none';
+  document.getElementById('login-pass').style.borderColor='';
+  if(!p){err.style.display='block';err.textContent='❌ Password tidak boleh kosong';return;}
+  // Auto-detect role dari password
+  if(p===CFG.adminPass){
+    currentRole='sekretaris';
+    sessionStorage.setItem('admin_ok','sekretaris');
     document.getElementById('loading-screen').style.display='flex';
-    loadAllData().then(()=>{document.getElementById('loading-screen').style.display='none';showAdmin(currentRole);});
+    loadAllData().then(()=>{document.getElementById('loading-screen').style.display='none';showAdmin('sekretaris');});
+  } else if(p===CFG.bendaharaPass){
+    currentRole='bendahara';
+    sessionStorage.setItem('admin_ok','bendahara');
+    document.getElementById('loading-screen').style.display='flex';
+    loadAllData().then(()=>{document.getElementById('loading-screen').style.display='none';showAdmin('bendahara');});
+  } else if(p===CFG.tokenInput){
+    // Password input — langsung ke halaman input token
+    sessionStorage.setItem('token_ok','1');
+    sessionStorage.setItem('token_time',String(Date.now()));
+    timerSisa=600;
+    document.getElementById('loading-screen').style.display='flex';
+    loadPublicData().then(()=>{
+      document.getElementById('loading-screen').style.display='none';
+      showInputToken();
+      tampilFormToken();
+      mulaiTimer();
+    });
   } else {
-    document.getElementById('login-err').style.display='block';
+    err.style.display='block';
+    err.textContent='❌ Password salah. Coba lagi.';
     document.getElementById('login-pass').style.borderColor='var(--red)';
+    setTimeout(()=>{document.getElementById('login-pass').style.borderColor='';},1500);
   }
 }
+
 function doLogout(){
   sessionStorage.removeItem('admin_ok');
-  location.reload();
+  sembunyikanSemua();
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').style.display='none';
+  document.body.classList.remove('role-bendahara');
+  document.getElementById('page-login').style.display='flex';
 }
+
 function showAdmin(role){
   currentRole=role;
-  document.getElementById('page-login').style.display='none';
+  sembunyikanSemua();
   document.getElementById('page-admin').style.display='block';
-  // Role visual
   if(role==='bendahara'){
     document.body.classList.add('role-bendahara');
     document.getElementById('sidebar-badge').textContent='💰 BENDAHARA';
@@ -942,20 +935,21 @@ function showAdmin(role){
     document.getElementById('topbar-role-badge').textContent='💰 BENDAHARA';
     document.getElementById('topbar-role-badge').style.background='var(--teal-light)';
     document.getElementById('topbar-role-badge').style.color='var(--teal)';
-    // Sembunyikan nav sekretaris, tampilkan nav bendahara
     document.querySelectorAll('.role-sek').forEach(el=>el.style.display='none');
     document.querySelectorAll('.role-ben').forEach(el=>el.style.display='flex');
-    // Init bendahara
     bIsiTahunSel();
     gotoTab('b-anggota');
-    bRenderAnggota();
-    bMuatIuran();
-    bMuatGalangan();
-    bMuatPengurus();
+    bRenderAnggota();bMuatIuran();bMuatGalangan();bMuatPengurus();
   } else {
+    document.body.classList.remove('role-bendahara');
     document.getElementById('sidebar-badge').textContent='⛪ SEKRETARIS';
     document.getElementById('sidebar-badge').className='role-badge sekretaris';
+    document.getElementById('sidebar-sub').textContent='Partonggoan Sumbayak';
     document.getElementById('topbar-role-badge').textContent='⛪ SEKRETARIS';
+    document.getElementById('topbar-role-badge').style.background='var(--gold-light)';
+    document.getElementById('topbar-role-badge').style.color='#7A5C1E';
+    document.querySelectorAll('.role-ben').forEach(el=>el.style.display='none');
+    document.querySelectorAll('.role-sek').forEach(el=>el.style.display='flex');
     renderAnggota(allAnggota);muatStats();isiTahunSel();muatRekap();muatRiwayat();renderJadwal();
     gotoTab('anggota');
   }
@@ -2638,24 +2632,20 @@ function bSetRp(id,angka){const el=document.getElementById(id);if(!el)return;el.
 // ══════════════════════════════════════════════════════
 
 function showInputToken(){
+  // Sembunyikan semua dulu
   document.getElementById('page-admin').style.display='none';
   document.getElementById('page-login').style.display='none';
   document.getElementById('loading-screen').style.display='none';
+  // Tampilkan halaman input dengan background teal
   const pg=document.getElementById('page-input-token');
-  pg.style.display='none';
   pg.classList.add('show');
-  // isi jadwal & tahun
+  // Isi jadwal & tahun
   const tahunNow=new Date().getFullYear();
   const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahunNow))).sort((a,b)=>a.nomor-b.nomor);
   const sel=document.getElementById('tk-jadwal');
   if(sel)sel.innerHTML=jt.length?jt.map(j=>`<option value="${j.id}">P${j.nomor} — ${j.tanggal||'—'} (${j.tuan_rumah||'—'})</option>`).join(''):'<option>Belum ada jadwal</option>';
   const thnSel=document.getElementById('tk-tahun');
   if(thnSel){let o='';for(let y=CFG.tahunAwal;y<=CFG.tahunAkhir;y++)o+=`<option value="${y}"${y===tahunNow?'selected':''}>${y}</option>`;thnSel.innerHTML=o;}
-  // Cek sesi token aktif
-  const tokenOk=sessionStorage.getItem('token_ok');
-  const tokenTime=parseInt(sessionStorage.getItem('token_time')||'0');
-  const elapsed=Math.floor((Date.now()-tokenTime)/1000);
-  if(tokenOk==='1'&&elapsed<600){timerSisa=600-elapsed;tampilFormToken();mulaiTimer();}
 }
 
 function cekToken(){
@@ -2687,9 +2677,20 @@ function updateTimerUI(){
   const bar=document.getElementById('tk-bar');if(bar){bar.style.width=(timerSisa/600*100)+'%';if(timerSisa<120)bar.style.background='linear-gradient(90deg,var(--red),#E74C3C)';}
 }
 function kembaliKeLogin(){
+  if(timerInterval)clearInterval(timerInterval);
+  sessionStorage.removeItem('token_ok');sessionStorage.removeItem('token_time');
+  // Reset form token ke awal
+  document.getElementById('tk-form-box').style.display='none';
+  document.getElementById('tk-login-box').style.display='block';
+  document.getElementById('tk-strip').style.display='none';
+  document.getElementById('tk-bar-wrap').style.display='none';
+  document.getElementById('tk-input').value='';
+  document.getElementById('tk-err').style.display='none';
+  // Kembali ke halaman login
   document.getElementById('page-input-token').classList.remove('show');
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').style.display='none';
   document.getElementById('page-login').style.display='flex';
-  pilihRole('input');
 }
 function keluarToken(){
   if(timerInterval)clearInterval(timerInterval);
