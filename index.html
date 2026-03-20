@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" onerror="window.PptxGenJS=null"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -309,6 +310,7 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
       <button class="nav-item role-sek" onclick="gotoTab('jadwal')" id="nav-jadwal"><span class="nav-icon">📅</span>Jadwal Partonggoan</button>
       <button class="nav-item role-sek" onclick="gotoTab('pengurus')" id="nav-pengurus"><span class="nav-icon">🏛️</span>Pengurus</button>
       <!-- Nav Bendahara (tersembunyi default) -->
+      <button class="nav-item role-ben" onclick="gotoTab('b-analis')" id="nav-b-analis" style="display:none"><span class="nav-icon">📈</span>Analisis Keuangan</button>
       <button class="nav-item role-ben" onclick="gotoTab('b-anggota')" id="nav-b-anggota" style="display:none"><span class="nav-icon">👥</span>Daftar Anggota</button>
       <button class="nav-item role-ben" onclick="gotoTab('b-iuran')" id="nav-b-iuran" style="display:none"><span class="nav-icon">📊</span>Rekap Iuran</button>
       <button class="nav-item role-ben" onclick="gotoTab('b-galangan')" id="nav-b-galangan" style="display:none"><span class="nav-icon">🙏</span>Rekap Galangan</button>
@@ -493,6 +495,129 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
       <!-- ════════════════════════════════════════
            DASHBOARD BENDAHARA — tabs b-*
            ════════════════════════════════════════ -->
+
+      <!-- ══ TAB B-ANALIS ══ -->
+      <div id="tab-b-analis" style="display:none" class="fade-in">
+
+        <!-- KPI Cards Row -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px" id="analis-kpi-row">
+          <div class="stat-box" style="background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:white;border:none">
+            <div class="stat-icon" style="background:rgba(255,255,255,.15);font-size:20px">💳</div>
+            <div><div class="stat-val" id="an-total-iuran" style="color:white;font-size:22px">—</div><div class="stat-lbl" style="color:rgba(255,255,255,.7)">Total Iuran 2026</div></div>
+          </div>
+          <div class="stat-box" style="background:linear-gradient(135deg,var(--green),#3D6B3F);color:white;border:none">
+            <div class="stat-icon" style="background:rgba(255,255,255,.15);font-size:20px">📈</div>
+            <div><div class="stat-val" id="an-total-masuk" style="color:white;font-size:22px">—</div><div class="stat-lbl" style="color:rgba(255,255,255,.7)">Total Uang Masuk</div></div>
+          </div>
+          <div class="stat-box" style="background:linear-gradient(135deg,var(--red),#C0392B);color:white;border:none">
+            <div class="stat-icon" style="background:rgba(255,255,255,.15);font-size:20px">📉</div>
+            <div><div class="stat-val" id="an-total-keluar" style="color:white;font-size:22px">—</div><div class="stat-lbl" style="color:rgba(255,255,255,.7)">Total Uang Keluar</div></div>
+          </div>
+          <div class="stat-box" style="background:linear-gradient(135deg,#2471A3,#1A5276);color:white;border:none">
+            <div class="stat-icon" style="background:rgba(255,255,255,.15);font-size:20px">🏦</div>
+            <div><div class="stat-val" id="an-saldo" style="color:white;font-size:22px">—</div><div class="stat-lbl" style="color:rgba(255,255,255,.7)">Saldo Kas</div></div>
+          </div>
+          <div class="stat-box" style="background:linear-gradient(135deg,#8E44AD,#6C3483);color:white;border:none">
+            <div class="stat-icon" style="background:rgba(255,255,255,.15);font-size:20px">✨</div>
+            <div><div class="stat-val" id="an-surplus" style="color:white;font-size:22px">—</div><div class="stat-lbl" style="color:rgba(255,255,255,.7)">Surplus</div></div>
+          </div>
+        </div>
+
+        <!-- Row 2: Statistik Anggota + Donut Chart -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+
+          <!-- Statistik Anggota -->
+          <div class="section-card" style="border-top:3px solid var(--teal)">
+            <h3 style="margin-bottom:16px">👥 Statistik Anggota 2026</h3>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F8F9FC;border-radius:10px">
+                <div style="font-size:13px;color:var(--dark)">👥 Total Anggota</div>
+                <div id="an-total-anggota" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--dark)">—</div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--teal-light);border-radius:10px;border-left:4px solid var(--teal)">
+                <div>
+                  <div style="font-size:13px;color:var(--teal);font-weight:700">✅ Sudah Lunas</div>
+                  <div style="font-size:10px;color:#888;margin-top:1px">Bayar penuh iuran 2026</div>
+                </div>
+                <div id="an-lunas" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--teal)">—</div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FEF9EC;border-radius:10px;border-left:4px solid var(--gold)">
+                <div>
+                  <div style="font-size:13px;color:var(--gold);font-weight:700">⚠️ Sebagian Bayar</div>
+                  <div style="font-size:10px;color:#888;margin-top:1px">Ada cicilan / partial</div>
+                </div>
+                <div id="an-sebagian" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--gold)">—</div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--red-light);border-radius:10px;border-left:4px solid var(--red)">
+                <div>
+                  <div style="font-size:13px;color:var(--red);font-weight:700">❌ Belum Bayar</div>
+                  <div style="font-size:10px;color:#888;margin-top:1px">Belum ada pembayaran</div>
+                </div>
+                <div id="an-belum" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--red)">—</div>
+              </div>
+              <!-- Kepatuhan Bar -->
+              <div style="background:#F8F9FC;border-radius:10px;padding:12px 14px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                  <div style="font-size:12px;font-weight:700;color:var(--dark)">📊 Tingkat Kepatuhan</div>
+                  <div id="an-pct" style="font-size:18px;font-weight:700;color:var(--teal)">0%</div>
+                </div>
+                <div style="background:#E0E0E0;border-radius:8px;height:10px;overflow:hidden">
+                  <div id="an-bar" style="height:100%;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:8px;transition:width .8s ease;width:0%"></div>
+                </div>
+                <div style="font-size:10px;color:#AAA;margin-top:5px">Persentase anggota yang sudah lunas dari total anggota</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Donut Chart Kepatuhan -->
+          <div class="section-card" style="border-top:3px solid var(--gold)">
+            <h3 style="margin-bottom:10px">🍩 Status Pembayaran</h3>
+            <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center">
+              <canvas id="chart-donut" style="max-height:220px"></canvas>
+            </div>
+            <div id="chart-donut-legend" style="display:flex;gap:12px;justify-content:center;margin-top:10px;flex-wrap:wrap"></div>
+          </div>
+        </div>
+
+        <!-- Row 3: Bar Chart Keuangan Bulanan -->
+        <div class="section-card" style="border-top:3px solid var(--green)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+            <h3 style="margin:0;padding:0;border:none">📅 Rekapitulasi Keuangan per Bulan 2026</h3>
+            <div style="font-size:11px;color:#AAA">Pemasukan vs Pengeluaran setiap bulan</div>
+          </div>
+          <div style="position:relative;height:260px">
+            <canvas id="chart-bulanan"></canvas>
+          </div>
+        </div>
+
+        <!-- Row 4: Line Chart Akumulasi Saldo + Iuran per bulan -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+          <div class="section-card" style="border-top:3px solid var(--blue)">
+            <h3 style="margin-bottom:10px">📈 Tren Saldo Kumulatif</h3>
+            <div style="position:relative;height:200px">
+              <canvas id="chart-saldo"></canvas>
+            </div>
+          </div>
+          <div class="section-card" style="border-top:3px solid #8E44AD">
+            <h3 style="margin-bottom:10px">💳 Iuran Terkumpul per Bulan</h3>
+            <div style="position:relative;height:200px">
+              <canvas id="chart-iuran-bln"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 5: Tabel Rekapitulasi Bulanan -->
+        <div class="section-card">
+          <h3>🗓️ Tabel Rekapitulasi Bulanan 2026</h3>
+          <div class="tbl-wrap">
+            <table class="data-tbl">
+              <thead><tr><th>Bulan</th><th style="text-align:right">Iuran</th><th style="text-align:right">Galangan</th><th style="text-align:right">Pemasukan Lain</th><th style="text-align:right">Total Masuk</th><th style="text-align:right">Pengeluaran</th><th style="text-align:right">Saldo Bln Ini</th><th style="text-align:right">Saldo Kumulatif</th></tr></thead>
+              <tbody id="an-tbl-bulanan"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /tab-b-analis -->
 
       <!-- ══ TAB B-ANGGOTA ══ -->
       <div id="tab-b-anggota" style="display:none" class="fade-in">
@@ -722,7 +847,8 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
         <div class="section-card">
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <button class="btn-sm btn-sm-excel" style="padding:10px 20px;font-size:13px" onclick="bEksporKeuangan()">📗 Export Excel Rekap Keuangan</button>
-            <span style="font-size:11px;color:#AAA">Format template keuangan lengkap</span>
+            <button class="btn-sm btn-sm-pptx" style="padding:10px 20px;font-size:13px" onclick="bEksporAnalisPPT()">📊 Export PPT Analisis</button>
+            <span style="font-size:11px;color:#AAA">Export rekap keuangan & analisis lengkap</span>
           </div>
         </div>
 
@@ -1098,8 +1224,8 @@ function showAdmin(role){
     document.querySelectorAll('.role-sek').forEach(el=>el.style.display='none');
     document.querySelectorAll('.role-ben').forEach(el=>el.style.display='flex');
     bIsiTahunSel();
-    gotoTab('b-anggota');
-    bRenderAnggota();bMuatIuran();bMuatGalangan();bMuatPengurus();
+    gotoTab('b-analis');
+    bRenderAnggota();bMuatIuran();bMuatGalangan();bMuatPengurus();bMuatAnalis();
   } else {
     document.body.classList.remove('role-bendahara');
     document.getElementById('sidebar-badge').textContent='⛪ SEKRETARIS';
@@ -1124,11 +1250,11 @@ async function loadAllData(){
   ]);
   allAnggota=r1.data||[];
   allAbsen=r2.data||[];
-  jadwalList=r3.data||[];
+  jadwalList=(r3.data||[]).map(j=>({...j,galangan:j.galangan!=null?Number(j.galangan):null}));
   pengurusDB=r4.data||[];
   if(!jadwalList.length) await seedJadwal();
   if(!pengurusDB.length) await seedPengurus();
-  try{const{data}=await db.from(CFG.tabelIuran).select('*');allIuran=data||[];}catch(e){allIuran=[];console.warn('iuran_anggota not ready');}
+  try{const{data}=await db.from(CFG.tabelIuran).select('*');allIuran=(data||[]).map(r=>({...r,nominal:Number(r.nominal||0)}));}catch(e){allIuran=[];console.warn('iuran_anggota not ready');}
 }
 
 async function loadPublicData(){
@@ -1141,8 +1267,8 @@ async function loadPublicData(){
 
 // ═══ TAB NAV ═══
 const SEK_TABS=['anggota','rekap','riwayat','jadwal','pengurus'];
-const BEN_TABS=['b-anggota','b-iuran','b-galangan','b-keuangan','b-history','b-pengurus'];
-const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus','b-anggota':'Daftar Anggota','b-iuran':'Rekap Iuran','b-galangan':'Rekap Galangan','b-keuangan':'Rekap Keuangan','b-history':'Histori Transaksi','b-pengurus':'Pengurus'};
+const BEN_TABS=['b-analis','b-anggota','b-iuran','b-galangan','b-keuangan','b-history','b-pengurus'];
+const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus','b-analis':'Analisis Keuangan','b-anggota':'Daftar Anggota','b-iuran':'Rekap Iuran','b-galangan':'Rekap Galangan','b-keuangan':'Rekap Keuangan','b-history':'Histori Transaksi','b-pengurus':'Pengurus'};
 function gotoTab(t){
   const allTabs=[...SEK_TABS,...BEN_TABS];
   allTabs.forEach(x=>{
@@ -1162,6 +1288,7 @@ function gotoTab(t){
   if(t==='b-pengurus')bMuatPengurus();
   if(t==='b-keuangan')bMuatKeuangan();
   if(t==='b-history')bMuatHistory();
+  if(t==='b-analis')bMuatAnalis();
 }
 
 // ═══ STATS ═══
@@ -2615,22 +2742,34 @@ function bRenderAnggota(){
   const tahun=parseInt(document.getElementById('b-filter-tahun')?.value)||new Date().getFullYear();
   const list=allAnggota.filter(a=>!q||a.nama.toLowerCase().includes(q));
   // Stats
-  const lunas=allAnggota.filter(a=>allIuran.some(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===tahun&&iu.nominal>0)).length;
-  const totalNom=allIuran.filter(iu=>iu.tahun===tahun).reduce((s,iu)=>s+iu.nominal,0);
+  const IU_T=160000;
+  const lunas=allAnggota.filter(a=>{const r=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===tahun);return r&&Number(r.nominal||0)>=IU_T;}).length;
+  const totalNom=allIuran.filter(iu=>iu.tahun===tahun).reduce((s,iu)=>s+Number(iu.nominal||0),0);
   document.getElementById('b-stat-total').textContent=allAnggota.length;
   document.getElementById('b-stat-lunas').textContent=lunas;
   document.getElementById('b-stat-nominal').textContent='Rp '+totalNom.toLocaleString('id-ID');
   const tbody=document.getElementById('b-anggota-tbody');
   if(!list.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#CCC;padding:30px">Belum ada anggota</td></tr>';return;}
+  const IU_TARGET=160000;
   tbody.innerHTML=list.map((a,i)=>{
     const rec=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===tahun);
-    const nom=rec?.nominal||0;
+    const nom=Number(rec?.nominal||0);
+    const lunas2=nom>=IU_TARGET;
+    const sebagian2=nom>0&&nom<IU_TARGET;
+    const statusChip=lunas2
+      ?'<span class="chip chip-teal">✓ Lunas</span>'
+      :sebagian2
+        ?`<span class="chip chip-gold">⚠ Sebagian</span>`
+        :'<span class="chip chip-gray">Belum Bayar</span>';
+    const nomTxt=nom?`<span style="font-weight:700;color:${lunas2?'var(--teal)':'var(--gold)'}">Rp ${nom.toLocaleString('id-ID')}</span>`
+      +'<br><span style="font-size:10px;color:#AAA">Target: Rp 160.000</span>'
+      :'<span style="color:#CCC">—</span>';
     return `<tr>
       <td class="center"><div class="badge-no" style="background:var(--teal-light);color:var(--teal)">${a.urutan||i+1}</div></td>
       <td style="font-weight:700">${a.nama}</td>
       <td style="color:#888;font-size:12px">${a.alamat||'—'}</td>
-      <td class="right">${nom?'<span style="font-weight:700;color:var(--teal)">Rp '+nom.toLocaleString('id-ID')+'</span>':'<span style="color:#CCC">—</span>'}</td>
-      <td class="center">${nom?'<span class="chip chip-teal">✓ Lunas</span>':'<span class="chip chip-gray">Belum</span>'}</td>
+      <td class="right">${nomTxt}</td>
+      <td class="center">${statusChip}</td>
       <td><button class="btn-sm btn-sm-teal" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${tahun},${nom})">✏️ ${nom?'Edit':'Input'}</button></td>
     </tr>`;
   }).join('');
@@ -2644,9 +2783,10 @@ function bMuatIuran(){
   const tbody=document.getElementById('b-rekap-tbody');
   thead.innerHTML=`<tr><th class="left" style="width:28px">No</th><th class="left" style="min-width:130px">Nama</th>${YEARS.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>`;
   // Summary
-  const lunas=allAnggota.filter(a=>allIuran.some(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===now&&iu.nominal>0)).length;
-  const grand=allIuran.reduce((s,iu)=>s+iu.nominal,0);
-  const nowTotal=allIuran.filter(iu=>iu.tahun===now).reduce((s,iu)=>s+iu.nominal,0);
+  const IU_TGT=160000;
+  const lunas=allAnggota.filter(a=>{const r=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===now);return r&&Number(r.nominal||0)>=IU_TGT;}).length;
+  const grand=allIuran.reduce((s,iu)=>s+Number(iu.nominal||0),0);
+  const nowTotal=allIuran.filter(iu=>iu.tahun===now).reduce((s,iu)=>s+Number(iu.nominal||0),0);
   document.getElementById('b-iuran-summary').innerHTML=[
     {v:allAnggota.length,l:'Total Anggota',bg:'var(--teal-light)'},
     {v:lunas+'/'+allAnggota.length,l:'Lunas '+now,bg:'#E8F5E9'},
@@ -2658,7 +2798,7 @@ function bMuatIuran(){
     let total=0;
     const cols=YEARS.map(y=>{
       const rec=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===y);
-      const nom=rec?.nominal||0;if(nom)total+=nom;
+      const nom=Number(rec?.nominal||0);if(nom)total+=nom;
       return `<td class="center">${nom
         ?`<span class="iuran-lunas" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${y},${nom})" title="${rec?.keterangan||'Lunas — klik edit'}">Rp ${nom.toLocaleString('id-ID')}</span>`
         :`<span class="iuran-belum" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${y},0)" title="Klik untuk input">—</span>`}</td>`;
@@ -2717,7 +2857,7 @@ async function bSimpanIuran(){
 function bMuatGalangan(){
   const tahun=parseInt(document.getElementById('b-filter-thn-gal')?.value)||new Date().getFullYear();
   const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
-  const total=jt.reduce((s,j)=>s+(j.galangan||0),0);
+  const total=jt.reduce((s,j)=>s+Number(j.galangan||0),0);
   const ada=jt.filter(j=>j.galangan>0).length;
   document.getElementById('b-gal-summary').innerHTML=[
     {v:jt.length,l:'Jadwal '+tahun,bg:'var(--teal-light)'},{v:ada,l:'Ada Galangan',bg:'#E8F5E9'},{v:'Rp '+total.toLocaleString('id-ID'),l:'Total Galangan',bg:'#FEF9EC'},
@@ -3036,9 +3176,10 @@ function bMuatIuranWithDel(){
   const thead=document.getElementById('b-rekap-thead');
   const tbody=document.getElementById('b-rekap-tbody');
   thead.innerHTML=`<tr><th class="left" style="width:28px">No</th><th class="left" style="min-width:130px">Nama</th>${YEARS.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>`;
-  const lunas=allAnggota.filter(a=>allIuran.some(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===now&&iu.nominal>0)).length;
-  const grand=allIuran.reduce((s,iu)=>s+iu.nominal,0);
-  const nowTotal=allIuran.filter(iu=>iu.tahun===now).reduce((s,iu)=>s+iu.nominal,0);
+  const IU_TGT=160000;
+  const lunas=allAnggota.filter(a=>{const r=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===now);return r&&Number(r.nominal||0)>=IU_TGT;}).length;
+  const grand=allIuran.reduce((s,iu)=>s+Number(iu.nominal||0),0);
+  const nowTotal=allIuran.filter(iu=>iu.tahun===now).reduce((s,iu)=>s+Number(iu.nominal||0),0);
   document.getElementById('b-iuran-summary').innerHTML=[
     {v:allAnggota.length,l:'Total Anggota',bg:'var(--teal-light)'},
     {v:lunas+'/'+allAnggota.length,l:'Lunas '+now,bg:'#E8F5E9'},
@@ -3050,16 +3191,22 @@ function bMuatIuranWithDel(){
     let total=0;
     const cols=YEARS.map(y=>{
       const rec=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===y);
-      const nom=rec?.nominal||0;if(nom)total+=nom;
+      const nom=Number(rec?.nominal||0);if(nom)total+=nom;
+      const IU_T2=160000;
+      const isLunas=nom>=IU_T2;
+      const isSebagian=nom>0&&nom<IU_T2;
       if(nom){
+        const cellColor=isLunas?'var(--teal)':'var(--gold)';
+        const cellBg=isLunas?'var(--teal-light)':'#FEF9EC';
+        const statusTxt=isLunas?'✓':'⚠';
         return `<td class="center">
           <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
-            <span class="iuran-lunas" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${y},${nom})" title="Klik edit">Rp ${nom.toLocaleString('id-ID')}</span>
+            <span style="background:${cellBg};color:${cellColor};font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;cursor:pointer;white-space:nowrap" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${y},${nom})" title="${isLunas?'Lunas':'Sebagian — klik edit'}">${statusTxt} Rp ${nom.toLocaleString('id-ID')}</span>
             <button class="btn-sm btn-sm-red" style="font-size:9px;padding:2px 6px" onclick="bHapusIuran('${rec.id}','${esc(a.nama)}',${y},${nom})">🗑</button>
           </div>
         </td>`;
       }
-      return `<td class="center"><span class="iuran-belum" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${y},0)" title="Klik input">—</span></td>`;
+      return `<td class="center"><span class="iuran-belum" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${y},0)" title="Klik untuk input iuran">+ Input</span></td>`;
     }).join('');
     return `<tr><td class="center" style="color:#AAA;font-size:11px">${a.urutan||idx+1}</td><td style="font-weight:700;font-size:12px">${a.nama}</td>${cols}<td class="right" style="font-family:'Playfair Display',serif;color:var(--teal)">Rp ${total.toLocaleString('id-ID')}</td></tr>`;
   }).join('');
@@ -3071,7 +3218,7 @@ const _origBMuatGalangan = bMuatGalangan;
 function bMuatGalanganWithDel(){
   const tahun=parseInt(document.getElementById('b-filter-thn-gal')?.value)||new Date().getFullYear();
   const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
-  const total=jt.reduce((s,j)=>s+(j.galangan||0),0);
+  const total=jt.reduce((s,j)=>s+Number(j.galangan||0),0);
   const ada=jt.filter(j=>j.galangan>0).length;
   document.getElementById('b-gal-summary').innerHTML=[
     {v:jt.length,l:'Jadwal '+tahun,bg:'var(--teal-light)'},{v:ada,l:'Ada Galangan',bg:'#E8F5E9'},{v:'Rp '+total.toLocaleString('id-ID'),l:'Total Galangan',bg:'#FEF9EC'},
@@ -3129,17 +3276,17 @@ async function bMuatKeuangan(){
 
   // Pemasukan otomatis: iuran tahun ini
   const iuranTahun=allIuran.filter(iu=>iu.tahun===tahun);
-  const totalIuran=iuranTahun.reduce((s,iu)=>s+iu.nominal,0);
+  const totalIuran=iuranTahun.reduce((s,iu)=>s+Number(iu.nominal||0),0);
   // Pemasukan otomatis: galangan tahun ini
   const galanganTahun=jt.filter(j=>j.galangan>0);
-  const totalGalangan=galanganTahun.reduce((s,j)=>s+(j.galangan||0),0);
+  const totalGalangan=galanganTahun.reduce((s,j)=>s+Number(j.galangan||0),0);
   // Pemasukan manual dari DB
   const masukManual=allKeuanganDB.filter(k=>k.jenis==='masuk'&&String(k.tahun)===String(tahun));
   // Pengeluaran dari DB
   const keluarAll=allKeuanganDB.filter(k=>k.jenis==='keluar'&&String(k.tahun)===String(tahun));
 
-  const totalMasuk=totalIuran+totalGalangan+masukManual.reduce((s,k)=>s+k.nominal,0);
-  const totalKeluar=keluarAll.reduce((s,k)=>s+k.nominal,0);
+  const totalMasuk=totalIuran+totalGalangan+masukManual.reduce((s,k)=>s+Number(k.nominal||0),0);
+  const totalKeluar=keluarAll.reduce((s,k)=>s+Number(k.nominal||0),0);
   const saldo=totalMasuk-totalKeluar;
 
   // Update stat
@@ -3256,11 +3403,11 @@ async function bEksporKeuangan(){
   const iuranTahun=allIuran.filter(iu=>iu.tahun===tahun);
   const masukManual=allKeuanganDB.filter(k=>k.jenis==='masuk'&&String(k.tahun)===String(tahun));
   const keluarAll=allKeuanganDB.filter(k=>k.jenis==='keluar'&&String(k.tahun)===String(tahun));
-  const totalIuran=iuranTahun.reduce((s,iu)=>s+iu.nominal,0);
-  const totalGalangan=jt.filter(j=>j.galangan>0).reduce((s,j)=>s+(j.galangan||0),0);
-  const totalMasukManual=masukManual.reduce((s,k)=>s+k.nominal,0);
+  const totalIuran=iuranTahun.reduce((s,iu)=>s+Number(iu.nominal||0),0);
+  const totalGalangan=jt.filter(j=>j.galangan>0).reduce((s,j)=>s+Number(j.galangan||0),0);
+  const totalMasukManual=masukManual.reduce((s,k)=>s+Number(k.nominal||0),0);
   const totalMasuk=totalIuran+totalGalangan+totalMasukManual;
-  const totalKeluar=keluarAll.reduce((s,k)=>s+k.nominal,0);
+  const totalKeluar=keluarAll.reduce((s,k)=>s+Number(k.nominal||0),0);
   const saldo=totalMasuk-totalKeluar;
   const wb=XLSX.utils.book_new();
   const tglCetak=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
@@ -3339,6 +3486,374 @@ function bIsiTahunSelFull(){
   const el=document.getElementById('b-keu-tahun');if(el){el.innerHTML=opts;el.value=String(now);}
 }
 bIsiTahunSel=bIsiTahunSelFull;
+
+// ══════════════════════════════════════════════════════
+//  A N A L I S I S   K E U A N G A N
+// ══════════════════════════════════════════════════════
+
+let chartDonut=null, chartBulanan=null, chartSaldo=null, chartIuranBln=null;
+const BULAN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const BULAN_FULL=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+function destroyChart(c){if(c){try{c.destroy();}catch(e){}}}
+
+async function bMuatAnalis(){
+  // Pastikan data terbaru
+  await bLoadKeuangan();
+  const TAHUN=2026;
+
+  // ── Data iuran 2026 ──
+  const iuran2026=allIuran.filter(iu=>iu.tahun===TAHUN);
+  const totalIuran=iuran2026.reduce((s,iu)=>s+Number(iu.nominal||0),0);
+
+  // ── Data jadwal 2026 ──
+  const jt2026=jadwalList.filter(j=>String(j.tanggal||'').includes(String(TAHUN))).sort((a,b)=>a.nomor-b.nomor);
+  const totalGalangan=jt2026.filter(j=>j.galangan>0).reduce((s,j)=>s+Number(j.galangan||0),0);
+
+  // ── Keuangan DB 2026 ──
+  const masukManual=allKeuanganDB.filter(k=>k.jenis==='masuk'&&String(k.tahun)===String(TAHUN));
+  const keluarAll=allKeuanganDB.filter(k=>k.jenis==='keluar'&&String(k.tahun)===String(TAHUN));
+  const totalMasukManual=masukManual.reduce((s,k)=>s+Number(k.nominal||0),0);
+  const totalMasuk=totalIuran+totalGalangan+totalMasukManual;
+  const totalKeluar=keluarAll.reduce((s,k)=>s+Number(k.nominal||0),0);
+  const saldo=totalMasuk-totalKeluar;
+  const surplus=totalMasuk-totalKeluar;
+
+  // ── KPI Cards ──
+  const fmt=n=>'Rp '+n.toLocaleString('id-ID');
+  const fmtShort=n=>n>=1000000?'Rp '+(n/1000000).toFixed(1)+'Jt':'Rp '+n.toLocaleString('id-ID');
+  document.getElementById('an-total-iuran').textContent=fmtShort(totalIuran);
+  document.getElementById('an-total-masuk').textContent=fmtShort(totalMasuk);
+  document.getElementById('an-total-keluar').textContent=fmtShort(totalKeluar);
+  document.getElementById('an-saldo').textContent=fmtShort(saldo);
+  document.getElementById('an-surplus').textContent=fmtShort(surplus);
+
+  // ── Statistik Anggota ──
+  const IURAN_TARGET=160000; // Target iuran per anggota per tahun
+  const totalAng=allAnggota.length;
+  // Lunas = nominal >= IURAN_TARGET
+  // Sebagian = ada bayar tapi < IURAN_TARGET
+  // Belum = tidak ada record sama sekali atau nominal = 0
+  const lunas=allAnggota.filter(a=>{
+    const rec=iuran2026.find(iu=>iu.anggota_id===a.id||iu.nama===a.nama);
+    return rec && Number(rec.nominal||0)>=IURAN_TARGET;
+  }).length;
+  const sebagian=allAnggota.filter(a=>{
+    const rec=iuran2026.find(iu=>iu.anggota_id===a.id||iu.nama===a.nama);
+    return rec && Number(rec.nominal||0)>0 && Number(rec.nominal||0)<IURAN_TARGET;
+  }).length;
+  const belum=totalAng-lunas-sebagian;
+  const pct=totalAng>0?Math.round((lunas/totalAng)*100):0; // % kepatuhan = hanya yg lunas penuh
+
+  document.getElementById('an-total-anggota').textContent=totalAng;
+  document.getElementById('an-lunas').textContent=lunas;
+  document.getElementById('an-sebagian').textContent=sebagian;
+  document.getElementById('an-belum').textContent=Math.max(0,belum);
+  document.getElementById('an-pct').textContent=pct+'%';
+  document.getElementById('an-bar').style.width=pct+'%';
+  document.getElementById('an-bar').style.background=pct>=80?'linear-gradient(90deg,var(--teal),var(--green))':pct>=50?'linear-gradient(90deg,var(--gold),#E67E22)':'linear-gradient(90deg,var(--red),#E74C3C)';
+
+  // ── Data per Bulan ──
+  const masukPerBulan=Array(12).fill(0);
+  const keluarPerBulan=Array(12).fill(0);
+  const iuranPerBulan=Array(12).fill(0);
+  const galanganPerBulan=Array(12).fill(0);
+  const masukLainPerBulan=Array(12).fill(0);
+
+  // Iuran: pakai updated_at atau created_at
+  iuran2026.forEach(iu=>{
+    const d=new Date(iu.updated_at||iu.created_at||`${TAHUN}-01-01`);
+    if(d.getFullYear()===TAHUN){
+      const m=d.getMonth();
+      iuranPerBulan[m]+=Number(iu.nominal||0);
+      masukPerBulan[m]+=Number(iu.nominal||0);
+    }
+  });
+
+  // Galangan: parse tanggal dari string jadwal
+  jt2026.filter(j=>j.galangan>0).forEach(j=>{
+    // tanggal format: "Minggu, 15 Maret 2026"
+    const parts=(j.tanggal||'').split(' ');
+    const bulanIdx=BULAN_FULL.findIndex(b=>parts.some(p=>p.toLowerCase()===b.toLowerCase()));
+    if(bulanIdx>=0){
+      galanganPerBulan[bulanIdx]+=Number(j.galangan||0);
+      masukPerBulan[bulanIdx]+=Number(j.galangan||0);
+    }
+  });
+
+  // Masuk manual
+  masukManual.forEach(k=>{
+    const d=new Date(k.created_at||`${TAHUN}-01-01`);
+    if(d.getFullYear()===TAHUN){const m=d.getMonth();masukLainPerBulan[m]+=Number(k.nominal||0);masukPerBulan[m]+=Number(k.nominal||0);}
+  });
+
+  // Keluar
+  keluarAll.forEach(k=>{
+    const d=new Date(k.created_at||`${TAHUN}-01-01`);
+    if(d.getFullYear()===TAHUN){const m=d.getMonth();keluarPerBulan[m]+=Number(k.nominal||0);}
+  });
+
+  // Saldo kumulatif
+  const saldoKumulatif=[];
+  let cum=0;
+  for(let i=0;i<12;i++){cum+=masukPerBulan[i]-keluarPerBulan[i];saldoKumulatif.push(cum);}
+
+  // ── DONUT CHART ──
+  destroyChart(chartDonut);
+  const ctxD=document.getElementById('chart-donut')?.getContext('2d');
+  if(ctxD&&typeof Chart!=='undefined'){
+    chartDonut=new Chart(ctxD,{
+      type:'doughnut',
+      data:{
+        labels:['Sudah Lunas','Sebagian Bayar','Belum Bayar'],
+        datasets:[{
+          data:[lunas,sebagian,Math.max(0,belum)],
+          backgroundColor:['#1A7A6A','#C49A4A','#C0392B'],
+          borderWidth:3,borderColor:'white',hoverOffset:6
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} anggota`}}
+        },
+        cutout:'65%'
+      }
+    });
+    // Legend manual
+    document.getElementById('chart-donut-legend').innerHTML=[
+      {c:'#1A7A6A',l:'Lunas',v:lunas},
+      {c:'#C49A4A',l:'Sebagian',v:sebagian},
+      {c:'#C0392B',l:'Belum',v:Math.max(0,belum)},
+    ].map(x=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px"><div style="width:10px;height:10px;border-radius:3px;background:${x.c}"></div><span>${x.l}: <b>${x.v}</b></span></div>`).join('');
+  }
+
+  // ── BAR CHART BULANAN ──
+  destroyChart(chartBulanan);
+  const ctxB=document.getElementById('chart-bulanan')?.getContext('2d');
+  if(ctxB&&typeof Chart!=='undefined'){
+    chartBulanan=new Chart(ctxB,{
+      type:'bar',
+      data:{
+        labels:BULAN,
+        datasets:[
+          {label:'Pemasukan',data:masukPerBulan,backgroundColor:'rgba(26,122,106,.75)',borderColor:'#1A7A6A',borderWidth:1.5,borderRadius:5},
+          {label:'Pengeluaran',data:keluarPerBulan,backgroundColor:'rgba(192,57,43,.75)',borderColor:'#C0392B',borderWidth:1.5,borderRadius:5}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:14}},
+          tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: Rp ${ctx.parsed.y.toLocaleString('id-ID')}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11}}},
+          y:{ticks:{callback:v=>v>=1000000?'Rp '+(v/1000000).toFixed(1)+'Jt':'Rp '+v.toLocaleString('id-ID'),font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}}
+        }
+      }
+    });
+  }
+
+  // ── LINE CHART SALDO KUMULATIF ──
+  destroyChart(chartSaldo);
+  const ctxS=document.getElementById('chart-saldo')?.getContext('2d');
+  if(ctxS&&typeof Chart!=='undefined'){
+    chartSaldo=new Chart(ctxS,{
+      type:'line',
+      data:{
+        labels:BULAN,
+        datasets:[{
+          label:'Saldo Kumulatif',data:saldoKumulatif,
+          borderColor:'#2471A3',backgroundColor:'rgba(36,113,163,.1)',
+          borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#2471A3',fill:true,tension:0.3
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`Saldo: Rp ${ctx.parsed.y.toLocaleString('id-ID')}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:10}}},
+          y:{ticks:{callback:v=>v>=1000000?'Rp '+(v/1000000).toFixed(1)+'Jt':'Rp '+v.toLocaleString('id-ID'),font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}}
+        }
+      }
+    });
+  }
+
+  // ── BAR CHART IURAN PER BULAN ──
+  destroyChart(chartIuranBln);
+  const ctxI=document.getElementById('chart-iuran-bln')?.getContext('2d');
+  if(ctxI&&typeof Chart!=='undefined'){
+    chartIuranBln=new Chart(ctxI,{
+      type:'bar',
+      data:{
+        labels:BULAN,
+        datasets:[
+          {label:'Iuran',data:iuranPerBulan,backgroundColor:'rgba(142,68,173,.75)',borderColor:'#8E44AD',borderWidth:1.5,borderRadius:5},
+          {label:'Galangan',data:galanganPerBulan,backgroundColor:'rgba(196,154,74,.75)',borderColor:'#C49A4A',borderWidth:1.5,borderRadius:5}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}},
+          tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: Rp ${ctx.parsed.y.toLocaleString('id-ID')}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:10}}},
+          y:{ticks:{callback:v=>v>=1000000?'Rp '+(v/1000000).toFixed(1)+'Jt':'Rp '+v.toLocaleString('id-ID'),font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}}
+        }
+      }
+    });
+  }
+
+  // ── TABEL REKAPITULASI BULANAN ──
+  // Hitung bulan terakhir yang ada data
+  const lastAktifIdx = masukPerBulan.reduce((last,v,i)=>(v>0?i:last), keluarPerBulan.reduce((last,v,i)=>(v>0?i:last),-1));
+  let cumSaldo=0;
+  const tbody=document.getElementById('an-tbl-bulanan');
+  let totalRow={iuran:0,gal:0,lain:0,masuk:0,keluar:0};
+  tbody.innerHTML=BULAN_FULL.map((bln,i)=>{
+    const masuk=masukPerBulan[i];const keluar=keluarPerBulan[i];
+    const saldoBln=masuk-keluar;
+    const ada=masuk>0||keluar>0;
+    if(ada) cumSaldo+=saldoBln; // kumulatif hanya tambah jika ada data
+    totalRow.iuran+=iuranPerBulan[i];totalRow.gal+=galanganPerBulan[i];
+    totalRow.lain+=masukLainPerBulan[i];totalRow.masuk+=masuk;totalRow.keluar+=keluar;
+    // Saldo kumulatif: tampil hanya sampai bulan yang sudah ada data
+    const tampilKumulatif = i<=lastAktifIdx && lastAktifIdx>=0;
+    const kumulatifVal = tampilKumulatif ? cumSaldo : null;
+    const saldoColor=saldoBln>0?'color:var(--green)':saldoBln<0?'color:var(--red)':'color:#888';
+    const rowStyle=!ada?'opacity:.45;background:#FAFAFA':'background:white';
+    return `<tr style="${rowStyle}">
+      <td style="font-weight:${ada?'700':'400'};font-size:13px;padding:10px 14px">${bln}</td>
+      <td class="right" style="font-size:12px;padding:10px 14px">${iuranPerBulan[i]?'<span style="color:var(--teal);font-weight:700">'+fmt(iuranPerBulan[i])+'</span>':'<span style="color:#DDD">—</span>'}</td>
+      <td class="right" style="font-size:12px;padding:10px 14px">${galanganPerBulan[i]?'<span style="color:var(--gold);font-weight:700">'+fmt(galanganPerBulan[i])+'</span>':'<span style="color:#DDD">—</span>'}</td>
+      <td class="right" style="font-size:12px;padding:10px 14px">${masukLainPerBulan[i]?fmt(masukLainPerBulan[i]):'<span style="color:#DDD">—</span>'}</td>
+      <td class="right" style="font-size:12px;font-weight:700;color:${masuk?'var(--green)':'#CCC'};padding:10px 14px">${masuk?fmt(masuk):'—'}</td>
+      <td class="right" style="font-size:12px;font-weight:700;color:${keluar?'var(--red)':'#CCC'};padding:10px 14px">${keluar?fmt(keluar):'—'}</td>
+      <td class="right" style="font-size:12px;font-weight:700;${ada?saldoColor:'color:#DDD'};padding:10px 14px">${ada?fmt(saldoBln):'—'}</td>
+      <td class="right" style="font-size:12px;font-weight:700;color:${kumulatifVal!=null?(kumulatifVal>=0?'var(--blue)':'var(--red)'):'#DDD'};padding:10px 14px">${kumulatifVal!=null?fmt(kumulatifVal):'—'}</td>
+    </tr>`;
+  }).join('')+`<tr style="background:linear-gradient(135deg,#1A3A35,#2A6B5A);color:white">
+    <td style="font-weight:700;color:white;padding:11px 14px">TOTAL 2026</td>
+    <td class="right" style="color:#7FFFD4;font-weight:700;padding:11px 14px">${totalRow.iuran?fmt(totalRow.iuran):'—'}</td>
+    <td class="right" style="color:#FFD700;font-weight:700;padding:11px 14px">${totalRow.gal?fmt(totalRow.gal):'—'}</td>
+    <td class="right" style="color:rgba(255,255,255,.8);padding:11px 14px">${totalRow.lain?fmt(totalRow.lain):'—'}</td>
+    <td class="right" style="color:#90EE90;font-weight:700;padding:11px 14px">${totalRow.masuk?fmt(totalRow.masuk):'—'}</td>
+    <td class="right" style="color:#FF8080;font-weight:700;padding:11px 14px">${totalRow.keluar?fmt(totalRow.keluar):'—'}</td>
+    <td class="right" style="color:${surplus>=0?'#90EE90':'#FF8080'};font-weight:700;padding:11px 14px">${fmt(surplus)}</td>
+    <td class="right" style="color:#87CEEB;font-weight:700;padding:11px 14px">${fmt(cumSaldo)}</td>
+  </tr>`;
+}
+
+// ══════════════════════════════════════════════════════
+//  E X P O R T   P P T   A N A L I S I S
+// ══════════════════════════════════════════════════════
+async function bEksporAnalisPPT(){
+  if(!window.PptxGenJS){showToast('❌ Library PPT tidak tersedia. Coba refresh halaman.');return;}
+  await bLoadKeuangan();
+  const TAHUN=2026;
+  const IU_TARGET=160000;
+  const iuran2026=allIuran.filter(iu=>iu.tahun===TAHUN);
+  const jt2026=jadwalList.filter(j=>String(j.tanggal||'').includes(String(TAHUN))).sort((a,b)=>a.nomor-b.nomor);
+  const masukManual=allKeuanganDB.filter(k=>k.jenis==='masuk'&&String(k.tahun)===String(TAHUN));
+  const keluarAll=allKeuanganDB.filter(k=>k.jenis==='keluar'&&String(k.tahun)===String(TAHUN));
+  const totalIuran=iuran2026.reduce((s,iu)=>s+Number(iu.nominal||0),0);
+  const totalGalangan=jt2026.filter(j=>j.galangan>0).reduce((s,j)=>s+Number(j.galangan||0),0);
+  const totalMasukManual=masukManual.reduce((s,k)=>s+Number(k.nominal||0),0);
+  const totalMasuk=totalIuran+totalGalangan+totalMasukManual;
+  const totalKeluar=keluarAll.reduce((s,k)=>s+Number(k.nominal||0),0);
+  const saldo=totalMasuk-totalKeluar;
+  const lunasAng=allAnggota.filter(a=>{const r=iuran2026.find(iu=>iu.anggota_id===a.id||iu.nama===a.nama);return r&&Number(r.nominal||0)>=IU_TARGET;}).length;
+  const sebagianAng=allAnggota.filter(a=>{const r=iuran2026.find(iu=>iu.anggota_id===a.id||iu.nama===a.nama);return r&&Number(r.nominal||0)>0&&Number(r.nominal||0)<IU_TARGET;}).length;
+  const belumAng=allAnggota.length-lunasAng-sebagianAng;
+  const pct=allAnggota.length>0?Math.round((lunasAng/allAnggota.length)*100):0;
+  const tglCetak=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  const fmt=n=>'Rp '+n.toLocaleString('id-ID');
+
+  showToast('⏳ Membuat PowerPoint...');
+  const pptx=new PptxGenJS();
+  pptx.layout='LAYOUT_WIDE';
+  const D='1A3A35',G='C49A4A',T='1A7A6A',W='FFFFFF',GR='3D6B3F',R='C0392B',BL='2471A3';
+
+  // ── Slide 1: Cover ──
+  const s1=pptx.addSlide();
+  s1.background={color:D};
+  s1.addShape(pptx.ShapeType.rect,{x:0,y:2.8,w:'100%',h:.06,fill:{color:G}});
+  s1.addText('LAPORAN ANALISIS KEUANGAN',{x:.5,y:.4,w:12,fontSize:11,color:G,bold:true,charSpacing:6,fontFace:'Calibri'});
+  s1.addText(CFG.namaAcara,{x:.5,y:.95,w:12,fontSize:30,color:W,bold:true,fontFace:'Georgia'});
+  s1.addText('Tahun '+TAHUN,{x:.5,y:1.75,w:12,fontSize:48,color:G,bold:true,fontFace:'Georgia'});
+  s1.addText('Dicetak: '+tglCetak,{x:.5,y:3.2,w:12,fontSize:11,color:'888888',fontFace:'Calibri'});
+
+  // ── Slide 2: Ringkasan Keuangan ──
+  const s2=pptx.addSlide();s2.background={color:'F8FFFE'};
+  s2.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.9,fill:{color:D}});
+  s2.addText('RINGKASAN KEUANGAN '+TAHUN,{x:.4,y:.18,w:12,fontSize:14,color:G,bold:true,fontFace:'Calibri'});
+  s2.addShape(pptx.ShapeType.rect,{x:.4,y:1.0,w:2.4,h:1.6,fill:{color:T},line:{color:T,pt:0}});
+  s2.addText('TOTAL MASUK',{x:.4,y:1.1,w:2.4,fontSize:9,color:'CCFFEF',bold:true,align:'center',fontFace:'Calibri'});
+  s2.addText(fmt(totalMasuk),{x:.4,y:1.4,w:2.4,fontSize:13,color:W,bold:true,align:'center',fontFace:'Calibri'});
+  s2.addShape(pptx.ShapeType.rect,{x:3.1,y:1.0,w:2.4,h:1.6,fill:{color:R}});
+  s2.addText('TOTAL KELUAR',{x:3.1,y:1.1,w:2.4,fontSize:9,color:'FFCCCC',bold:true,align:'center',fontFace:'Calibri'});
+  s2.addText(fmt(totalKeluar),{x:3.1,y:1.4,w:2.4,fontSize:13,color:W,bold:true,align:'center',fontFace:'Calibri'});
+  s2.addShape(pptx.ShapeType.rect,{x:5.8,y:1.0,w:2.4,h:1.6,fill:{color:BL}});
+  s2.addText('SALDO KAS',{x:5.8,y:1.1,w:2.4,fontSize:9,color:'CCE5FF',bold:true,align:'center',fontFace:'Calibri'});
+  s2.addText(fmt(saldo),{x:5.8,y:1.4,w:2.4,fontSize:13,color:W,bold:true,align:'center',fontFace:'Calibri'});
+  s2.addShape(pptx.ShapeType.rect,{x:8.5,y:1.0,w:2.4,h:1.6,fill:{color:'8E44AD'}});
+  s2.addText('SURPLUS',{x:8.5,y:1.1,w:2.4,fontSize:9,color:'ECC8FF',bold:true,align:'center',fontFace:'Calibri'});
+  s2.addText(fmt(saldo),{x:8.5,y:1.4,w:2.4,fontSize:13,color:W,bold:true,align:'center',fontFace:'Calibri'});
+  // Breakdown
+  s2.addShape(pptx.ShapeType.rect,{x:.4,y:2.8,w:'91%',h:1.6,fill:{color:'F0F9F6'},line:{color:'C8EDE8',pt:1}});
+  s2.addText('Detail Pemasukan:',{x:.6,y:2.95,w:4,fontSize:10,color:D,bold:true,fontFace:'Calibri'});
+  s2.addText(`• Iuran Anggota: ${fmt(totalIuran)}`,{x:.6,y:3.25,w:4,fontSize:10,color:'333333',fontFace:'Calibri'});
+  s2.addText(`• Galangan: ${fmt(totalGalangan)}`,{x:.6,y:3.55,w:4,fontSize:10,color:'333333',fontFace:'Calibri'});
+  s2.addText(`• Pemasukan Lain: ${fmt(totalMasukManual)}`,{x:.6,y:3.85,w:4,fontSize:10,color:'333333',fontFace:'Calibri'});
+
+  // ── Slide 3: Statistik Anggota ──
+  const s3=pptx.addSlide();s3.background={color:'FFFEF8'};
+  s3.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.9,fill:{color:D}});
+  s3.addText('STATISTIK ANGGOTA '+TAHUN,{x:.4,y:.18,w:12,fontSize:14,color:G,bold:true,fontFace:'Calibri'});
+  const stats3=[
+    {lbl:'Total Anggota',val:allAnggota.length,clr:D,bg:'E8F5F3'},
+    {lbl:'Sudah Lunas',val:lunasAng,clr:T,bg:'D0F5EC'},
+    {lbl:'Sebagian Bayar',val:sebagianAng,clr:'9A7800',bg:'FEF9E1'},
+    {lbl:'Belum Bayar',val:belumAng,clr:R,bg:'FDEDEC'},
+  ];
+  stats3.forEach((st,i)=>{
+    const x=.4+i*3.0;
+    s3.addShape(pptx.ShapeType.rect,{x,y:1.1,w:2.6,h:1.8,fill:{color:st.bg},line:{color:'DDDDDD',pt:1}});
+    s3.addText(String(st.val),{x,y:1.3,w:2.6,fontSize:42,color:st.clr,bold:true,align:'center',fontFace:'Georgia'});
+    s3.addText(st.lbl,{x,y:2.5,w:2.6,fontSize:10,color:'666666',align:'center',fontFace:'Calibri'});
+  });
+  s3.addShape(pptx.ShapeType.rect,{x:.4,y:3.1,w:11.5,h:.7,fill:{color:'E8F5F3'},line:{color:T,pt:1}});
+  s3.addText(`Tingkat Kepatuhan: ${pct}% (${lunasAng} dari ${allAnggota.length} anggota lunas penuh — Target Rp 160.000/anggota)`,{x:.6,y:3.25,w:11,fontSize:11,color:T,bold:true,fontFace:'Calibri'});
+
+  // ── Slide 4: Rekap Iuran Anggota ──
+  const s4=pptx.addSlide();s4.background={color:'FAFAFA'};
+  s4.addShape(pptx.ShapeType.rect,{x:0,y:0,w:'100%',h:.9,fill:{color:D}});
+  s4.addText('REKAP IURAN ANGGOTA '+TAHUN,{x:.4,y:.18,w:12,fontSize:14,color:G,bold:true,fontFace:'Calibri'});
+  const maxR=20;
+  const tblR4=[
+    [{text:'No',options:{bold:true,color:W,fill:D,fontSize:9,align:'center'}},
+     {text:'Nama Anggota',options:{bold:true,color:W,fill:D,fontSize:9}},
+     {text:'Nominal',options:{bold:true,color:W,fill:D,fontSize:9,align:'center'}},
+     {text:'Status',options:{bold:true,color:W,fill:D,fontSize:9,align:'center'}}],
+    ...allAnggota.slice(0,maxR).map((a,i)=>{
+      const rec=iuran2026.find(iu=>iu.anggota_id===a.id||iu.nama===a.nama);
+      const nom=Number(rec?.nominal||0);
+      const isL=nom>=IU_TARGET;const isS=nom>0&&nom<IU_TARGET;
+      const fillC=i%2===0?'FFFFFF':'F5FFFB';
+      return [
+        {text:String(a.urutan||i+1),options:{align:'center',fontSize:9,fill:fillC}},
+        {text:a.nama,options:{bold:true,fontSize:9,fill:fillC}},
+        {text:nom?fmt(nom):'—',options:{align:'center',fontSize:9,fill:fillC,color:isL?T:isS?'9A7800':'888888'}},
+        {text:isL?'Lunas':isS?'Sebagian':'Belum',options:{align:'center',bold:true,fontSize:9,fill:fillC,color:isL?T:isS?'9A7800':R}},
+      ];
+    })
+  ];
+  s4.addTable(tblR4,{x:.4,y:1.0,w:12,colW:[.6,5.5,2.5,2.5],fontSize:9,border:{color:'DDDDDD'},autoPage:false});
+  if(allAnggota.length>maxR) s4.addText(`... dan ${allAnggota.length-maxR} anggota lainnya`,{x:.4,y:4.7,w:12,fontSize:9,color:'888888',align:'center',italic:true,fontFace:'Calibri'});
+
+  await pptx.writeFile({fileName:`Analisis_Keuangan_TSBP_${TAHUN}.pptx`});
+  showToast('✅ PowerPoint Analisis berhasil diunduh!');
+}
 
 init();
 </script>
