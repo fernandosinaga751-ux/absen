@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PptxGenJS/3.12.0/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" onerror="window.PptxGenJS=null"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
@@ -2467,6 +2467,7 @@ function eksporExcel(){
   XLSX.utils.book_append_sheet(wb,ws,'Rekap');XLSX.writeFile(wb,`Rekap_Partonggoan_${tahun}.xlsx`);showToast('✅ Excel diunduh!');
 }
 async function eksporPowerPoint(){
+  if(!window.PptxGenJS){showToast('❌ Library PPT gagal dimuat. Coba refresh halaman.');return;}
   const tahun=parseInt(document.getElementById('tahun-sel').value)||new Date().getFullYear();
   const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
   if(!allAnggota.length){showToast('Belum ada data!');return;}showToast('⏳ Membuat PowerPoint...');
