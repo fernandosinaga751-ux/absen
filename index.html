@@ -18,6 +18,7 @@
   --green:#5A7A5C;--green-light:#E8F5E9;
   --red:#C0392B;--red-light:#FDEDEC;
   --blue:#2471A3;--wa:#25D366;--wa-dark:#128C7E;
+  --teal:#1A7A6A;--teal-dark:#0E5046;--teal-light:#E0F5F2;
 }
 body{font-family:'Lato',sans-serif;min-height:100vh;background:#ECEEF2;}
 
@@ -205,6 +206,46 @@ table.data-tbl td.center{text-align:center;}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .fade-in{animation:fadeIn .3s ease both;}
+
+/* ── ROLE BADGE ── */
+.role-badge{display:inline-block;padding:2px 10px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.5px;margin-top:6px;}
+.role-badge.sekretaris{background:var(--gold);color:white;}
+.role-badge.bendahara{background:var(--teal);color:white;}
+
+/* ── BENDAHARA SIDEBAR ── */
+body.role-bendahara .admin-sidebar{background:linear-gradient(180deg,#1A3A35 0%,#2A6B5A 100%);}
+body.role-bendahara .nav-item.active{background:linear-gradient(135deg,var(--teal),var(--teal-dark));}
+body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
+
+/* ── REKAP IURAN ── */
+.rekap-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.rekap-tbl th{background:linear-gradient(135deg,#1A3A35,#2A6B5A);color:rgba(255,255,255,.9);padding:9px 10px;font-size:9px;font-weight:700;text-align:center;white-space:nowrap;letter-spacing:.5px;text-transform:uppercase;}
+.rekap-tbl th.left{text-align:left;}
+.rekap-tbl td{padding:8px 10px;border-bottom:1px solid #F0F2F5;color:var(--dark);vertical-align:middle;}
+.rekap-tbl tr:hover td{background:#F5FFFD;}
+.rekap-tbl td.center{text-align:center;}
+.rekap-tbl td.right{text-align:right;font-weight:700;}
+.iuran-lunas{background:var(--teal-light);color:var(--teal);font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;display:inline-block;cursor:pointer;white-space:nowrap;}
+.iuran-lunas:hover{opacity:.8;}
+.iuran-belum{background:#F0F2F5;color:#BBB;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;display:inline-block;cursor:pointer;}
+.iuran-belum:hover{background:#E0F5F2;color:var(--teal);}
+.chip-teal{background:var(--teal-light);color:var(--teal);}
+
+/* ── TIMER (halaman input token) ── */
+#page-input-token{display:none;min-height:100vh;background:linear-gradient(160deg,#1A3A35 0%,#2A6B5A 100%);padding:20px;flex-direction:column;align-items:center;justify-content:center;}
+#page-input-token.show{display:flex;}
+.token-card{background:white;border-radius:20px;padding:28px;max-width:480px;width:100%;box-shadow:0 16px 50px rgba(0,0,0,.25);margin-bottom:14px;}
+.token-card h2{font-family:'Playfair Display',serif;font-size:18px;color:var(--dark);margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--teal-light);}
+.timer-strip{background:#1A3A35;border-radius:10px;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;max-width:480px;width:100%;}
+.timer-bar-wrap{background:rgba(255,255,255,.15);border-radius:6px;height:5px;overflow:hidden;margin-bottom:14px;max-width:480px;width:100%;}
+.timer-bar{height:100%;background:linear-gradient(90deg,var(--teal),#27AE60);transition:width 1s linear;width:100%;}
+.tab-input-sw{display:flex;gap:4px;margin-bottom:16px;background:#F0F2F5;border-radius:10px;padding:4px;}
+.tab-input-sw button{flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;font-family:'Lato',sans-serif;cursor:pointer;background:transparent;color:#888;transition:all .2s;}
+.tab-input-sw button.active{background:white;color:var(--teal);box-shadow:0 2px 6px rgba(0,0,0,.08);}
+.rp-wrap{position:relative;}
+.rp-wrap>span{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700;color:var(--teal);font-size:13px;pointer-events:none;}
+.rp-wrap>input{padding-left:36px;}
+.btn-sm-teal{background:var(--teal);color:white;}
 </style>
 </head>
 <body>
@@ -218,11 +259,17 @@ table.data-tbl td.center{text-align:center;}
 <!-- ═══ LOGIN ═══ -->
 <div id="page-login" style="display:none">
   <div class="login-card fade-in">
-    <div class="login-logo">⛪</div>
-    <h1>Admin Panel</h1>
+    <div class="login-logo" id="login-logo">⛪</div>
+    <h1 id="login-title">Admin Panel</h1>
     <p>Partonggoan TSBP Medan Timur</p>
+    <!-- Role selector -->
+    <div style="display:flex;gap:8px;margin-bottom:18px;">
+      <button id="btn-role-sek" onclick="pilihRole('sekretaris')" style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--gold);background:linear-gradient(135deg,var(--dark),#6B3F2A);color:white;font-weight:700;font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;">⛪ Sekretaris</button>
+      <button id="btn-role-ben" onclick="pilihRole('bendahara')" style="flex:1;padding:10px;border-radius:10px;border:2px solid transparent;background:#F0F2F5;color:#888;font-weight:700;font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;">💰 Bendahara</button>
+      <button id="btn-role-inp" onclick="pilihRole('input')" style="flex:1;padding:10px;border-radius:10px;border:2px solid transparent;background:#F0F2F5;color:#888;font-weight:700;font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;">🔑 Input</button>
+    </div>
     <input type="password" id="login-pass" placeholder="Masukkan password..." onkeydown="if(event.key==='Enter')doLogin()"/>
-    <button class="login-btn" onclick="doLogin()">🔐 Masuk</button>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">🔐 Masuk</button>
     <div class="login-err" id="login-err">❌ Password salah. Coba lagi.</div>
   </div>
 </div>
@@ -233,15 +280,21 @@ table.data-tbl td.center{text-align:center;}
   <div class="admin-sidebar" id="sidebar">
     <div class="sidebar-logo">
       <h2>TSBP Medan Timur</h2>
-      <p>Partonggoan Sumbayak</p>
+      <p id="sidebar-sub">Partonggoan Sumbayak</p>
+      <div class="role-badge" id="sidebar-badge">SEKRETARIS</div>
     </div>
-    <div class="sidebar-nav">
-      <button class="nav-item active" onclick="gotoTab('anggota')" id="nav-anggota"><span class="nav-icon">👥</span>Daftar Anggota</button>
-      <button class="nav-item" onclick="gotoTab('rekap')" id="nav-rekap"><span class="nav-icon">📊</span>Rekap Kehadiran</button>
-      <button class="nav-item" onclick="gotoTab('riwayat')" id="nav-riwayat"><span class="nav-icon">📋</span>Riwayat</button>
-      <button class="nav-item" onclick="gotoTab('jadwal')" id="nav-jadwal"><span class="nav-icon">📅</span>Jadwal Partonggoan</button>
-      <button class="nav-item" onclick="gotoTab('pengurus')" id="nav-pengurus"><span class="nav-icon">🏛️</span>Pengurus</button>
-      <button class="nav-item" onclick="gotoTab('security')" id="nav-security" style="display:none"><span class="nav-icon">🔒</span>Security RLS</button>
+    <div class="sidebar-nav" id="sidebar-nav">
+      <!-- Nav Sekretaris -->
+      <button class="nav-item active role-sek" onclick="gotoTab('anggota')" id="nav-anggota"><span class="nav-icon">👥</span>Daftar Anggota</button>
+      <button class="nav-item role-sek" onclick="gotoTab('rekap')" id="nav-rekap"><span class="nav-icon">📊</span>Rekap Kehadiran</button>
+      <button class="nav-item role-sek" onclick="gotoTab('riwayat')" id="nav-riwayat"><span class="nav-icon">📋</span>Riwayat</button>
+      <button class="nav-item role-sek" onclick="gotoTab('jadwal')" id="nav-jadwal"><span class="nav-icon">📅</span>Jadwal Partonggoan</button>
+      <button class="nav-item role-sek" onclick="gotoTab('pengurus')" id="nav-pengurus"><span class="nav-icon">🏛️</span>Pengurus</button>
+      <!-- Nav Bendahara (tersembunyi default) -->
+      <button class="nav-item role-ben" onclick="gotoTab('b-anggota')" id="nav-b-anggota" style="display:none"><span class="nav-icon">👥</span>Daftar Anggota</button>
+      <button class="nav-item role-ben" onclick="gotoTab('b-iuran')" id="nav-b-iuran" style="display:none"><span class="nav-icon">📊</span>Rekap Iuran</button>
+      <button class="nav-item role-ben" onclick="gotoTab('b-galangan')" id="nav-b-galangan" style="display:none"><span class="nav-icon">🙏</span>Rekap Galangan</button>
+      <button class="nav-item role-ben" onclick="gotoTab('b-pengurus')" id="nav-b-pengurus" style="display:none"><span class="nav-icon">🏛️</span>Pengurus</button>
     </div>
     <div class="sidebar-footer">
       <button class="logout-btn" onclick="doLogout()">🚪 Keluar</button>
@@ -253,6 +306,7 @@ table.data-tbl td.center{text-align:center;}
     <div class="admin-topbar">
       <div class="topbar-title" id="topbar-title">Daftar Anggota</div>
       <div class="topbar-actions">
+        <span id="topbar-role-badge" style="font-size:11px;background:var(--gold-light);color:#7A5C1E;padding:3px 10px;border-radius:8px;font-weight:700;margin-right:8px">⛪ SEKRETARIS</span>
         <span style="font-size:11px;color:#AAA" id="topbar-sub">Partonggoan TSBP Medan Timur</span>
       </div>
     </div>
@@ -416,23 +470,186 @@ table.data-tbl td.center{text-align:center;}
         </div>
       </div>
 
-      <!-- ══════ TAB SECURITY (tersembunyi dari menu) ══════ -->
-      <div id="tab-security" style="display:none" class="fade-in">
-        <div class="section-card" style="border-left:4px solid var(--red)">
-          <h3 style="color:var(--red)">🔒 Perbaikan Keamanan Supabase (RLS)</h3>
-          <p style="font-size:13px;color:#666;line-height:1.8;margin-bottom:16px">Supabase Security Advisor mendeteksi isu keamanan. Salin SQL di bawah dan jalankan di <b>Supabase → SQL Editor</b>.</p>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-            <button class="btn-danger" onclick="bukaSupabaseSQL()">🔧 Buka Supabase SQL Editor</button>
-            <button class="btn-outline" onclick="salinSQL()">📋 Salin SQL</button>
-            <span id="sec-msg" style="font-size:12px"></span>
+      <!-- ════════════════════════════════════════
+           DASHBOARD BENDAHARA — tabs b-*
+           ════════════════════════════════════════ -->
+
+      <!-- ══ TAB B-ANGGOTA ══ -->
+      <div id="tab-b-anggota" style="display:none" class="fade-in">
+        <div class="stats-row">
+          <div class="stat-box"><div class="stat-icon" style="background:var(--teal-light)">👥</div><div><div class="stat-val" id="b-stat-total">—</div><div class="stat-lbl">Total Anggota</div></div></div>
+          <div class="stat-box"><div class="stat-icon" style="background:var(--teal-light)">💳</div><div><div class="stat-val" id="b-stat-lunas">—</div><div class="stat-lbl">Lunas Tahun Ini</div></div></div>
+          <div class="stat-box"><div class="stat-icon" style="background:#FEF9EC">💰</div><div><div class="stat-val" id="b-stat-nominal" style="font-size:15px">—</div><div class="stat-lbl">Total Iuran Tahun Ini</div></div></div>
+        </div>
+        <div class="section-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+            <h3 style="margin:0;padding:0;border:none">📋 Daftar Anggota & Status Iuran</h3>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="text" id="b-search-anggota" class="search-input" placeholder="🔍 Cari nama..." oninput="bRenderAnggota()"/>
+              <select id="b-filter-tahun" class="search-input" style="width:90px" onchange="bRenderAnggota()"></select>
+            </div>
           </div>
-          <textarea id="sql-preview" readonly style="width:100%;height:360px;font-family:monospace;font-size:11px;padding:14px;background:#1E1E1E;color:#D4D4D4;border:1px solid #444;border-radius:10px;resize:vertical;outline:none;line-height:1.7"></textarea>
+          <div class="tbl-wrap">
+            <table class="data-tbl">
+              <thead><tr><th>No</th><th>Nama Anggota</th><th>Alamat</th><th>Iuran Tahun Ini</th><th>Status</th><th>Aksi</th></tr></thead>
+              <tbody id="b-anggota-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB B-IURAN ══ -->
+      <div id="tab-b-iuran" style="display:none" class="fade-in">
+        <div class="section-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+            <h3 style="margin:0;padding:0;border:none">📊 Rekap Iuran Anggota (2020–2030)</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-sm btn-sm-excel" onclick="bEksporExcel()">📗 Export Excel</button>
+              <button class="btn-sm btn-sm-teal" onclick="bTambahIuran()">➕ Input Iuran</button>
+            </div>
+          </div>
+          <div id="b-iuran-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px"></div>
+          <div style="overflow-x:auto;border-radius:12px;border:1px solid #ECEEF2">
+            <table class="rekap-tbl" id="b-rekap-tbl">
+              <thead id="b-rekap-thead"></thead>
+              <tbody id="b-rekap-tbody"></tbody>
+            </table>
+          </div>
+          <div style="font-size:11px;color:#AAA;margin-top:8px">💡 Klik sel <b>—</b> untuk input iuran · Hijau = Lunas</div>
+        </div>
+        <!-- Form input iuran -->
+        <div class="section-card" id="b-form-iuran" style="display:none">
+          <h3>➕ Input / Edit Iuran</h3>
+          <div class="form-grid-3">
+            <div class="field">
+              <label>Nama Anggota *</label>
+              <div class="ac-wrap">
+                <input type="text" id="b-iu-nama" placeholder="Ketik nama..." autocomplete="off" oninput="bAcAnggota(this,'b-iu-drop')"/>
+                <div class="ac-drop" id="b-iu-drop"></div>
+              </div>
+              <input type="hidden" id="b-iu-aid"/>
+            </div>
+            <div class="field">
+              <label>Tahun *</label>
+              <select id="b-iu-tahun"></select>
+            </div>
+            <div class="field">
+              <label>Nominal Iuran (Rp) *</label>
+              <div class="rp-wrap"><span>Rp</span><input type="text" id="b-iu-nominal" placeholder="0" inputmode="numeric" oninput="formatRupiah(this)"/></div>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:14px">
+            <label>Keterangan</label>
+            <input type="text" id="b-iu-ket" placeholder="Lunas, cicilan, dll..."/>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn-primary" onclick="bSimpanIuran()">💾 Simpan</button>
+            <button class="btn-outline" onclick="document.getElementById('b-form-iuran').style.display='none'">Tutup</button>
+            <span id="b-iu-msg" style="font-size:12px"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB B-GALANGAN ══ -->
+      <div id="tab-b-galangan" style="display:none" class="fade-in">
+        <div class="section-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+            <h3 style="margin:0;padding:0;border:none">🙏 Rekap Galangan Partonggoan</h3>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="b-filter-thn-gal" class="search-input" style="width:90px" onchange="bMuatGalangan()"></select>
+              <button class="btn-sm btn-sm-excel" onclick="bEksporExcelGalangan()">📗 Export Excel</button>
+            </div>
+          </div>
+          <div id="b-gal-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px"></div>
+          <div class="tbl-wrap">
+            <table class="data-tbl">
+              <thead><tr><th>No</th><th>Partonggoan</th><th>Tanggal</th><th>Tuan Rumah</th><th style="text-align:right">Galangan (Rp)</th><th>Status</th><th>Aksi</th></tr></thead>
+              <tbody id="b-gal-tbody"></tbody>
+            </table>
+          </div>
+          <div style="font-size:11px;color:#AAA;margin-top:8px">ℹ️ Data galangan sinkron otomatis dengan riwayat sekretaris.</div>
+        </div>
+        <div class="section-card" id="b-form-galangan" style="display:none">
+          <h3>✏️ Edit Galangan</h3>
+          <input type="hidden" id="b-gl-id"/>
+          <div class="form-grid-2">
+            <div class="field"><label>Partonggoan</label><input type="text" id="b-gl-info" readonly style="background:#F0F2F5;color:#888"/></div>
+            <div class="field"><label>Nilai Galangan (Rp) *</label><div class="rp-wrap"><span>Rp</span><input type="text" id="b-gl-nominal" placeholder="0" inputmode="numeric" oninput="formatRupiah(this)"/></div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn-primary" onclick="bSimpanGalangan()">💾 Simpan & Sinkron</button>
+            <button class="btn-outline" onclick="document.getElementById('b-form-galangan').style.display='none'">Tutup</button>
+            <span id="b-gl-msg" style="font-size:12px"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ TAB B-PENGURUS ══ -->
+      <div id="tab-b-pengurus" style="display:none" class="fade-in">
+        <div class="section-card">
+          <h3>🏛️ Daftar Pengurus</h3>
+          <div style="font-size:12px;color:#888;margin-bottom:16px;font-style:italic">Tumpuan Sumbayak Boru Pakon Panogolan — Medan Timur Sekitarnya</div>
+          <div id="b-pengurus-list"></div>
         </div>
       </div>
 
     </div><!-- /admin-content -->
   </div><!-- /admin-main -->
 </div><!-- /page-admin -->
+
+<!-- ═══ HALAMAN INPUT TOKEN (bendahara input publik) ═══ -->
+<div id="page-input-token" style="display:none">
+  <div style="max-width:480px;width:100%;margin:0 auto">
+    <div class="timer-strip" id="tk-strip" style="display:none">
+      <div><div style="font-size:10px;color:rgba(255,255,255,.5)">Sesi aktif</div><div id="tk-timer" style="font-size:14px;font-weight:700;color:white;font-family:monospace">10:00</div></div>
+      <button onclick="keluarToken()" style="background:rgba(255,255,255,.15);color:white;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🚪 Keluar</button>
+    </div>
+    <div class="timer-bar-wrap" id="tk-bar-wrap" style="display:none;margin-bottom:12px"><div class="timer-bar" id="tk-bar"></div></div>
+
+    <!-- Box token login -->
+    <div id="tk-login-box" class="token-card">
+      <div style="text-align:center;margin-bottom:16px"><div style="width:56px;height:56px;background:linear-gradient(135deg,var(--teal),var(--teal-dark));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 10px">💰</div>
+      <h2 style="border:none;padding:0;margin:0">Input Token</h2>
+      <p style="font-size:12px;color:#888;margin-top:4px">Masukkan token dari admin bendahara</p></div>
+      <div class="field" style="margin-bottom:14px"><label>Token</label><input type="password" id="tk-input" placeholder="Masukkan token..." onkeydown="if(event.key==='Enter')cekToken()"/></div>
+      <button style="width:100%;padding:12px;background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif" onclick="cekToken()">✅ Masuk</button>
+      <div id="tk-err" style="font-size:12px;color:var(--red);margin-top:8px;display:none">❌ Token salah.</div>
+      <div style="text-align:center;margin-top:14px"><button onclick="kembaliKeLogin()" style="background:none;border:none;font-size:11px;color:#AAA;cursor:pointer;text-decoration:underline">← Kembali ke Login</button></div>
+    </div>
+
+    <!-- Form input setelah token valid -->
+    <div id="tk-form-box" class="token-card" style="display:none">
+      <div class="tab-input-sw">
+        <button class="active" onclick="tkSwitchTab('iuran')">💳 Iuran</button>
+        <button onclick="tkSwitchTab('galangan')">🙏 Galangan</button>
+      </div>
+      <!-- Iuran -->
+      <div id="tk-form-iuran">
+        <h2>💳 Input Iuran Anggota</h2>
+        <div class="field" style="margin-bottom:12px">
+          <label>Nama Anggota *</label>
+          <div class="ac-wrap"><input type="text" id="tk-nama" placeholder="Ketik nama..." autocomplete="off" oninput="tkAc(this,'tk-drop')"/><div class="ac-drop" id="tk-drop"></div></div>
+          <input type="hidden" id="tk-aid"/>
+        </div>
+        <div class="form-grid-2" style="margin-bottom:12px">
+          <div class="field"><label>Tahun *</label><select id="tk-tahun"></select></div>
+          <div class="field"><label>Nominal (Rp) *</label><div class="rp-wrap"><span>Rp</span><input type="text" id="tk-nominal" placeholder="0" inputmode="numeric" oninput="formatRupiah(this)"/></div></div>
+        </div>
+        <div class="field" style="margin-bottom:14px"><label>Keterangan</label><input type="text" id="tk-ket" placeholder="Lunas, cicilan, dll..."/></div>
+        <button style="width:100%;padding:12px;background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif" onclick="tkKirimIuran()">📨 Kirim</button>
+        <div id="tk-iu-msg" style="font-size:12px;margin-top:10px;text-align:center"></div>
+      </div>
+      <!-- Galangan -->
+      <div id="tk-form-galangan" style="display:none">
+        <h2>🙏 Input Galangan</h2>
+        <div class="field" style="margin-bottom:12px"><label>Partonggoan *</label><select id="tk-jadwal" style="padding:10px 14px;border:1.5px solid #E8E0D5;border-radius:10px;font-size:13px;font-family:'Lato',sans-serif;color:var(--dark);background:var(--cream);outline:none;width:100%"></select></div>
+        <div class="field" style="margin-bottom:14px"><label>Nilai Galangan (Rp) *</label><div class="rp-wrap"><span>Rp</span><input type="text" id="tk-gl-nominal" placeholder="0" inputmode="numeric" oninput="formatRupiah(this)"/></div></div>
+        <button style="width:100%;padding:12px;background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif" onclick="tkKirimGalangan()">📨 Kirim</button>
+        <div id="tk-gl-msg" style="font-size:12px;margin-top:10px;text-align:center"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ MODALS ══════════ -->
 
@@ -599,8 +816,22 @@ const CFG = {
   tabelAnggota: "anggota",
   tabelJadwal  : "jadwal_partonggoan",
   tabelPengurus: "pengurus",
-  adminPass    : "admin123",
+  tabelIuran   : "iuran_anggota",
+  adminPass    : "admin123",       // sekretaris
+  bendaharaPass: "bendahara2024",  // bendahara
+  tokenInput   : "input2024",      // token halaman input
+  tahunAwal    : 2020,
+  tahunAkhir   : 2030,
 };
+
+const {createClient} = supabase;
+const db = createClient(CFG.supabaseUrl, CFG.supabaseKey);
+
+let allAnggota=[], allAbsen=[], jadwalList=[], importData=[], pengurusDB=[], allIuran=[];
+let ekAnggotaId=null, ekAnggotaNama=null, ekTahun=null, ekJadwal=[];
+let currentRole='sekretaris'; // 'sekretaris' | 'bendahara'
+let selectedLoginRole='sekretaris';
+let timerInterval=null, timerSisa=600;
 
 const {createClient} = supabase;
 const db = createClient(CFG.supabaseUrl, CFG.supabaseKey);
@@ -611,11 +842,28 @@ let ekAnggotaId=null, ekAnggotaNama=null, ekTahun=null, ekJadwal=[];
 // ═══ INIT ═══
 async function init(){
   try{
-    if(sessionStorage.getItem('admin_ok')==='1'){
+    // Cek URL param untuk halaman input token
+    const url=new URL(location.href);
+    const tokenOk=sessionStorage.getItem('token_ok');
+    const tokenTime=parseInt(sessionStorage.getItem('token_time')||'0');
+    const tokenElapsed=Math.floor((Date.now()-tokenTime)/1000);
+    const isInputUrl=url.searchParams.get('input')==='1';
+    const isTokenActive=tokenOk==='1'&&tokenElapsed<600;
+
+    if(isInputUrl||isTokenActive){
+      await loadPublicData();
+      document.getElementById('loading-screen').style.display='none';
+      showInputToken();
+      return;
+    }
+    const sess=sessionStorage.getItem('admin_ok');
+    if(sess==='sekretaris'||sess==='bendahara'){
+      currentRole=sess;
       await loadAllData();
-      showAdmin();
+      showAdmin(currentRole);
     } else {
       document.getElementById('page-login').style.display='flex';
+      pilihRole('sekretaris');
     }
   }catch(e){
     document.getElementById('loading-screen').innerHTML=`<div style="text-align:center;padding:30px;color:white"><div style="font-size:36px;margin-bottom:14px">⚠️</div><div style="margin-bottom:16px;opacity:.7">${e.message}</div><button onclick="location.reload()" style="padding:10px 24px;background:var(--gold);color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700">🔄 Coba Lagi</button></div>`;
@@ -624,13 +872,60 @@ async function init(){
   document.getElementById('loading-screen').style.display='none';
 }
 
+// ═══ ROLE SELECTOR ═══
+function pilihRole(role){
+  selectedLoginRole=role;
+  const sek=document.getElementById('btn-role-sek');
+  const ben=document.getElementById('btn-role-ben');
+  const inp=document.getElementById('btn-role-inp');
+  const logo=document.getElementById('login-logo');
+  const title=document.getElementById('login-title');
+  const btn=document.getElementById('login-btn');
+  // Reset semua
+  [sek,ben,inp].forEach(b=>{b.style.background='#F0F2F5';b.style.color='#888';b.style.borderColor='transparent';});
+  if(role==='sekretaris'){
+    sek.style.background='linear-gradient(135deg,var(--dark),#6B3F2A)';sek.style.color='white';sek.style.borderColor='var(--gold)';
+    logo.textContent='⛪';title.textContent='Sekretaris';btn.textContent='🔐 Masuk Sekretaris';
+    btn.style.background='linear-gradient(135deg,var(--dark),#6B3F2A)';
+  } else if(role==='bendahara'){
+    ben.style.background='linear-gradient(135deg,var(--teal),var(--teal-dark))';ben.style.color='white';ben.style.borderColor='var(--teal)';
+    logo.textContent='💰';title.textContent='Bendahara';btn.textContent='🔐 Masuk Bendahara';
+    btn.style.background='linear-gradient(135deg,var(--teal),var(--teal-dark))';
+  } else {
+    inp.style.background='linear-gradient(135deg,#2C5F2E,#1A3A35)';inp.style.color='white';inp.style.borderColor='var(--green)';
+    logo.textContent='🔑';title.textContent='Input Token';btn.textContent='🔑 Masuk Input';
+    btn.style.background='linear-gradient(135deg,#2C5F2E,#1A3A35)';
+  }
+  document.getElementById('login-err').style.display='none';
+  document.getElementById('login-pass').value='';
+}
+
 // ═══ AUTH ═══
 function doLogin(){
   const p=document.getElementById('login-pass').value;
-  if(p===CFG.adminPass){
-    sessionStorage.setItem('admin_ok','1');
+  if(selectedLoginRole==='input'){
+    // Redirect ke halaman input token
+    if(p===CFG.tokenInput){
+      sessionStorage.setItem('token_ok','1');
+      sessionStorage.setItem('token_time',String(Date.now()));
+      timerSisa=600;
+      loadPublicData().then(()=>{
+        document.getElementById('page-login').style.display='none';
+        showInputToken();
+        tampilFormToken();
+        mulaiTimer();
+      });
+    } else {
+      document.getElementById('login-err').style.display='block';
+    }
+    return;
+  }
+  const pass=selectedLoginRole==='sekretaris'?CFG.adminPass:CFG.bendaharaPass;
+  if(p===pass){
+    currentRole=selectedLoginRole;
+    sessionStorage.setItem('admin_ok',currentRole);
     document.getElementById('loading-screen').style.display='flex';
-    loadAllData().then(()=>{document.getElementById('loading-screen').style.display='none';showAdmin();});
+    loadAllData().then(()=>{document.getElementById('loading-screen').style.display='none';showAdmin(currentRole);});
   } else {
     document.getElementById('login-err').style.display='block';
     document.getElementById('login-pass').style.borderColor='var(--red)';
@@ -638,37 +933,76 @@ function doLogin(){
 }
 function doLogout(){
   sessionStorage.removeItem('admin_ok');
-  document.getElementById('page-admin').style.display='none';
-  document.getElementById('page-login').style.display='flex';
-  document.getElementById('login-pass').value='';
-  document.getElementById('login-err').style.display='none';
+  location.reload();
 }
-function showAdmin(){
+function showAdmin(role){
+  currentRole=role;
   document.getElementById('page-login').style.display='none';
   document.getElementById('page-admin').style.display='block';
-  renderAnggota(allAnggota);muatStats();isiTahunSel();muatRekap();muatRiwayat();renderJadwal();
+  // Role visual
+  if(role==='bendahara'){
+    document.body.classList.add('role-bendahara');
+    document.getElementById('sidebar-badge').textContent='💰 BENDAHARA';
+    document.getElementById('sidebar-badge').className='role-badge bendahara';
+    document.getElementById('sidebar-sub').textContent='Panel Bendahara';
+    document.getElementById('topbar-role-badge').textContent='💰 BENDAHARA';
+    document.getElementById('topbar-role-badge').style.background='var(--teal-light)';
+    document.getElementById('topbar-role-badge').style.color='var(--teal)';
+    // Sembunyikan nav sekretaris, tampilkan nav bendahara
+    document.querySelectorAll('.role-sek').forEach(el=>el.style.display='none');
+    document.querySelectorAll('.role-ben').forEach(el=>el.style.display='flex');
+    // Init bendahara
+    bIsiTahunSel();
+    gotoTab('b-anggota');
+    bRenderAnggota();
+    bMuatIuran();
+    bMuatGalangan();
+    bMuatPengurus();
+  } else {
+    document.getElementById('sidebar-badge').textContent='⛪ SEKRETARIS';
+    document.getElementById('sidebar-badge').className='role-badge sekretaris';
+    document.getElementById('topbar-role-badge').textContent='⛪ SEKRETARIS';
+    renderAnggota(allAnggota);muatStats();isiTahunSel();muatRekap();muatRiwayat();renderJadwal();
+    gotoTab('anggota');
+  }
 }
 
 async function loadAllData(){
-  const[r1,r2,r3,r4]=await Promise.all([
+  const queries=[
     db.from(CFG.tabelAnggota).select('*').order('urutan,nama'),
     db.from(CFG.tabelAbsen).select('*').order('waktu',{ascending:false}),
     db.from(CFG.tabelJadwal).select('*').order('nomor'),
     db.from(CFG.tabelPengurus).select('*').order('urutan'),
-  ]);
+  ];
+  // Coba load iuran (tabel mungkin belum ada)
+  const[r1,r2,r3,r4]=await Promise.all(queries);
   allAnggota=r1.data||[];
   allAbsen=r2.data||[];
   jadwalList=r3.data||[];
   pengurusDB=r4.data||[];
   if(!jadwalList.length) await seedJadwal();
   if(!pengurusDB.length) await seedPengurus();
+  // Load iuran optional
+  try{const{data}=await db.from(CFG.tabelIuran).select('*');allIuran=data||[];}catch(e){allIuran=[];}
+}
+
+async function loadPublicData(){
+  const[r1,r2]=await Promise.all([
+    db.from(CFG.tabelAnggota).select('id,nama,urutan').order('urutan,nama'),
+    db.from(CFG.tabelJadwal).select('id,nomor,tanggal,tuan_rumah').order('nomor'),
+  ]);
+  allAnggota=r1.data||[];jadwalList=r2.data||[];
 }
 
 // ═══ TAB NAV ═══
-const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus',security:'Security RLS'};
+const SEK_TABS=['anggota','rekap','riwayat','jadwal','pengurus'];
+const BEN_TABS=['b-anggota','b-iuran','b-galangan','b-pengurus'];
+const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus','b-anggota':'Daftar Anggota','b-iuran':'Rekap Iuran','b-galangan':'Rekap Galangan','b-pengurus':'Pengurus'};
 function gotoTab(t){
-  ['anggota','rekap','riwayat','jadwal','pengurus','security'].forEach(x=>{
-    document.getElementById('tab-'+x).style.display=x===t?'block':'none';
+  const allTabs=[...SEK_TABS,...BEN_TABS];
+  allTabs.forEach(x=>{
+    const tab=document.getElementById('tab-'+x);
+    if(tab)tab.style.display=x===t?'block':'none';
     const nav=document.getElementById('nav-'+x);
     if(nav)nav.classList.toggle('active',x===t);
   });
@@ -677,7 +1011,10 @@ function gotoTab(t){
   if(t==='riwayat')muatRiwayat();
   if(t==='jadwal')renderJadwal();
   if(t==='pengurus')renderPengurus();
-  if(t==='security')initSecurityPanel();
+  if(t==='b-iuran')bMuatIuran();
+  if(t==='b-galangan')bMuatGalangan();
+  if(t==='b-anggota')bRenderAnggota();
+  if(t==='b-pengurus')bMuatPengurus();
 }
 
 // ═══ STATS ═══
@@ -1647,6 +1984,7 @@ function eksporRiwayatPDF(jadwalId){
   showToast('✅ PDF Riwayat berhasil diunduh!');
 }
 
+// ═══ EXPORT EXCEL & PPT ═══
 // ═══ PRINT TTD KEHADIRAN ═══
 // PDF F4 Portrait (215x330mm) — 1 kolom TTD = Partonggoan BERIKUTNYA
 function printTTDKehadiran(){
@@ -1694,7 +2032,6 @@ function printTTDKehadiran(){
 
   // ── KOLOM: No(8) | Nama(62) | Alamat(56) | Total Hadir(16) | TTD(49) ──
   const noW=8, namaW=62, alamatW=56, totalW=16, ttdW=CW-noW-namaW-alamatW-totalW;
-  const ROW_H=13; // tinggi baris cukup untuk angka
 
   const bodyRows=allAnggota.map((a,i)=>{
     const tot=jtAll.reduce((s,j)=>s+(cekHadirLocal(a.id,a.nama,j.tanggal)?1:0),0);
@@ -1703,12 +2040,9 @@ function printTTDKehadiran(){
       {content:a.nama,styles:{fontStyle:'bold',fontSize:7}},
       {content:a.alamat||'—',styles:{fontSize:6.5,textColor:[100,80,60]}},
       {content:tot+'x',styles:{halign:'center',fontStyle:'bold',fontSize:7,textColor:[90,122,92]}},
-      {content:'',styles:{minCellHeight:ROW_H}}, // TTD kolom — kosong, angka ditaruh via didDrawCell
+      {content:'',styles:{minCellHeight:13}},
     ];
   });
-
-  // Posisi TTD kolom (X offset dari kiri tabel)
-  const ttdColX=MX+noW+namaW+alamatW+totalW;
 
   doc.autoTable({
     startY:y,
@@ -1739,31 +2073,21 @@ function printTTDKehadiran(){
       fontSize:7,textColor:[50,32,20],
       cellPadding:{top:2,bottom:2,left:2,right:2},
       lineColor:[210,200,185],lineWidth:0.15,
-      minCellHeight:ROW_H,
+      minCellHeight:13,
       valign:'middle',
     },
     alternateRowStyles:{fillColor:[251,247,238]},
     styles:{overflow:'linebreak',valign:'middle'},
     theme:'grid',
-    // ── Gambar nomor transparan di kolom TTD setiap baris ──
     didDrawCell:(data)=>{
-      if(data.section==='body' && data.column.index===4){
-        const rowIdx=data.row.index;
-        const anggota=allAnggota[rowIdx];
-        const nomor=String(anggota?(anggota.urutan||rowIdx+1):rowIdx+1);
-        const cx=data.cell.x;
-        const cy=data.cell.y;
-        const cw2=data.cell.width;
-        const ch=data.cell.height;
-        // Angka transparan besar — pakai warna sangat muda (hampir transparan)
-        doc.setFont('helvetica','bold');
-        // Ukuran font proporsional dengan tinggi baris, max 20pt
-        const fs=Math.min(20, Math.max(10, ch*0.72));
-        doc.setFontSize(fs);
-        // Warna sangat muda = efek transparan (tidak bisa opacity di jsPDF tanpa plugin)
-        doc.setTextColor(196,174,134); // gold sangat muda / pudar
-        doc.text(nomor, cx+cw2/2, cy+ch/2+fs*0.18, {align:'center', baseline:'middle'});
-        // Reset warna
+      if(data.section==='body'&&data.column.index===4){
+        const ang=allAnggota[data.row.index];
+        const nomor=String(ang?(ang.urutan||data.row.index+1):data.row.index+1);
+        const cx=data.cell.x,cy=data.cell.y,cw2=data.cell.width,ch=data.cell.height;
+        const fs=Math.min(20,Math.max(10,ch*0.72));
+        doc.setFont('helvetica','bold');doc.setFontSize(fs);
+        doc.setTextColor(210,190,155); // gold pudar = transparan
+        doc.text(nomor,cx+cw2/2,cy+ch/2+fs*0.18,{align:'center',baseline:'middle'});
         doc.setTextColor(50,32,20);
       }
     },
@@ -2127,49 +2451,307 @@ function showToast(msg,dur=3000){const t=document.getElementById('toast');t.text
 // ═══ HELPER ═══
 function esc(s){return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
-// ═══════════════════════════════════════
-//  S E C U R I T Y   R L S
-// ═══════════════════════════════════════
-const RLS_SQL=`-- FIX RLS — Partonggoan TSBP Medan Timur
-ALTER TABLE public.jadwal_partonggoan ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.pengurus ENABLE ROW LEVEL SECURITY;
-DO $$ BEGIN
-  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='daftar_hadir_maret_2026') THEN EXECUTE 'ALTER TABLE public.daftar_hadir_maret_2026 ENABLE ROW LEVEL SECURITY'; END IF;
-  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='daftar_hadir_april_2026') THEN EXECUTE 'ALTER TABLE public.daftar_hadir_april_2026 ENABLE ROW LEVEL SECURITY'; END IF;
-END $$;
-DO $$ DECLARE r record; BEGIN FOR r IN SELECT policyname FROM pg_policies WHERE tablename='anggota' AND schemaname='public' LOOP EXECUTE 'DROP POLICY IF EXISTS '||quote_ident(r.policyname)||' ON public.anggota'; END LOOP; END $$;
-CREATE POLICY "anggota_read"   ON public.anggota FOR SELECT TO anon USING (true);
-CREATE POLICY "anggota_insert" ON public.anggota FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "anggota_update" ON public.anggota FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "anggota_delete" ON public.anggota FOR DELETE TO anon USING (true);
-DO $$ DECLARE r record; BEGIN FOR r IN SELECT policyname FROM pg_policies WHERE tablename='daftar_hadir' AND schemaname='public' LOOP EXECUTE 'DROP POLICY IF EXISTS '||quote_ident(r.policyname)||' ON public.daftar_hadir'; END LOOP; END $$;
-CREATE POLICY "daftar_hadir_read"   ON public.daftar_hadir FOR SELECT TO anon USING (true);
-CREATE POLICY "daftar_hadir_insert" ON public.daftar_hadir FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "daftar_hadir_update" ON public.daftar_hadir FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "daftar_hadir_delete" ON public.daftar_hadir FOR DELETE TO anon USING (true);
-DO $$ DECLARE r record; BEGIN FOR r IN SELECT policyname FROM pg_policies WHERE tablename='jadwal_partonggoan' AND schemaname='public' LOOP EXECUTE 'DROP POLICY IF EXISTS '||quote_ident(r.policyname)||' ON public.jadwal_partonggoan'; END LOOP; END $$;
-CREATE POLICY "jadwal_read"   ON public.jadwal_partonggoan FOR SELECT TO anon USING (true);
-CREATE POLICY "jadwal_insert" ON public.jadwal_partonggoan FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "jadwal_update" ON public.jadwal_partonggoan FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "jadwal_delete" ON public.jadwal_partonggoan FOR DELETE TO anon USING (true);
-DO $$ DECLARE r record; BEGIN FOR r IN SELECT policyname FROM pg_policies WHERE tablename='pengurus' AND schemaname='public' LOOP EXECUTE 'DROP POLICY IF EXISTS '||quote_ident(r.policyname)||' ON public.pengurus'; END LOOP; END $$;
-CREATE POLICY "pengurus_read"   ON public.pengurus FOR SELECT TO anon USING (true);
-CREATE POLICY "pengurus_insert" ON public.pengurus FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "pengurus_update" ON public.pengurus FOR UPDATE TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "pengurus_delete" ON public.pengurus FOR DELETE TO anon USING (true);`;
+// ══════════════════════════════════════════════════════
+//  B E N D A H A R A   F U N C T I O N S
+// ══════════════════════════════════════════════════════
 
-function initSecurityPanel(){const el=document.getElementById('sql-preview');if(el&&!el.value)el.value=RLS_SQL;}
-function salinSQL(){
-  const el=document.getElementById('sql-preview');if(!el)return;
-  navigator.clipboard.writeText(el.value).then(()=>{
-    showToast('✅ SQL disalin!');
-    const m=document.getElementById('sec-msg');m.style.color='var(--green)';m.textContent='✓ Paste di Supabase SQL Editor lalu klik Run';setTimeout(()=>m.textContent='',5000);
-  }).catch(()=>{el.select();document.execCommand('copy');showToast('✅ SQL disalin!');});
+function bIsiTahunSel(){
+  const now=new Date().getFullYear();
+  let opts='';for(let y=CFG.tahunAwal;y<=CFG.tahunAkhir;y++) opts+=`<option value="${y}"${y===now?'selected':''}>${y}</option>`;
+  ['b-filter-tahun','b-filter-thn-gal','b-iu-tahun'].forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML=opts;el.value=String(now);}});
 }
-function bukaSupabaseSQL(){
-  const proj=CFG.supabaseUrl.replace('https://','').split('.')[0];
-  salinSQL();
-  window.open('https://supabase.com/dashboard/project/'+proj+'/sql/new','_blank');
+
+// ── Tab b-anggota ──
+function bRenderAnggota(){
+  const q=(document.getElementById('b-search-anggota')?.value||'').toLowerCase();
+  const tahun=parseInt(document.getElementById('b-filter-tahun')?.value)||new Date().getFullYear();
+  const list=allAnggota.filter(a=>!q||a.nama.toLowerCase().includes(q));
+  // Stats
+  const lunas=allAnggota.filter(a=>allIuran.some(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===tahun&&iu.nominal>0)).length;
+  const totalNom=allIuran.filter(iu=>iu.tahun===tahun).reduce((s,iu)=>s+iu.nominal,0);
+  document.getElementById('b-stat-total').textContent=allAnggota.length;
+  document.getElementById('b-stat-lunas').textContent=lunas;
+  document.getElementById('b-stat-nominal').textContent='Rp '+totalNom.toLocaleString('id-ID');
+  const tbody=document.getElementById('b-anggota-tbody');
+  if(!list.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#CCC;padding:30px">Belum ada anggota</td></tr>';return;}
+  tbody.innerHTML=list.map((a,i)=>{
+    const rec=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===tahun);
+    const nom=rec?.nominal||0;
+    return `<tr>
+      <td class="center"><div class="badge-no" style="background:var(--teal-light);color:var(--teal)">${a.urutan||i+1}</div></td>
+      <td style="font-weight:700">${a.nama}</td>
+      <td style="color:#888;font-size:12px">${a.alamat||'—'}</td>
+      <td class="right">${nom?'<span style="font-weight:700;color:var(--teal)">Rp '+nom.toLocaleString('id-ID')+'</span>':'<span style="color:#CCC">—</span>'}</td>
+      <td class="center">${nom?'<span class="chip chip-teal">✓ Lunas</span>':'<span class="chip chip-gray">Belum</span>'}</td>
+      <td><button class="btn-sm btn-sm-teal" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${tahun},${nom})">✏️ ${nom?'Edit':'Input'}</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Tab b-iuran (rekap) ──
+function bMuatIuran(){
+  const YEARS=[];for(let y=CFG.tahunAwal;y<=CFG.tahunAkhir;y++)YEARS.push(y);
+  const now=new Date().getFullYear();
+  const thead=document.getElementById('b-rekap-thead');
+  const tbody=document.getElementById('b-rekap-tbody');
+  thead.innerHTML=`<tr><th class="left" style="width:28px">No</th><th class="left" style="min-width:130px">Nama</th>${YEARS.map(y=>`<th>${y}</th>`).join('')}<th>Total</th></tr>`;
+  // Summary
+  const lunas=allAnggota.filter(a=>allIuran.some(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===now&&iu.nominal>0)).length;
+  const grand=allIuran.reduce((s,iu)=>s+iu.nominal,0);
+  const nowTotal=allIuran.filter(iu=>iu.tahun===now).reduce((s,iu)=>s+iu.nominal,0);
+  document.getElementById('b-iuran-summary').innerHTML=[
+    {v:allAnggota.length,l:'Total Anggota',bg:'var(--teal-light)'},
+    {v:lunas+'/'+allAnggota.length,l:'Lunas '+now,bg:'#E8F5E9'},
+    {v:'Rp '+nowTotal.toLocaleString('id-ID'),l:'Iuran '+now,bg:'#FEF9EC'},
+    {v:'Rp '+grand.toLocaleString('id-ID'),l:'Total Semua',bg:'#F0F2F5'},
+  ].map(s=>`<div class="stat-box" style="background:${s.bg}"><div><div class="stat-val" style="font-size:15px">${s.v}</div><div class="stat-lbl">${s.l}</div></div></div>`).join('');
+  if(!allAnggota.length){tbody.innerHTML='<tr><td colspan="'+(YEARS.length+3)+'" style="text-align:center;color:#CCC;padding:20px">Belum ada anggota</td></tr>';return;}
+  tbody.innerHTML=allAnggota.map((a,idx)=>{
+    let total=0;
+    const cols=YEARS.map(y=>{
+      const rec=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===y);
+      const nom=rec?.nominal||0;if(nom)total+=nom;
+      return `<td class="center">${nom
+        ?`<span class="iuran-lunas" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${y},${nom})" title="${rec?.keterangan||'Lunas — klik edit'}">Rp ${nom.toLocaleString('id-ID')}</span>`
+        :`<span class="iuran-belum" onclick="bBukaInputIuran('${a.id}','${esc(a.nama)}',${y},0)" title="Klik untuk input">—</span>`}</td>`;
+    }).join('');
+    return `<tr><td class="center" style="color:#AAA;font-size:11px">${a.urutan||idx+1}</td><td style="font-weight:700;font-size:12px">${a.nama}</td>${cols}<td class="right" style="font-family:'Playfair Display',serif;color:var(--teal)">Rp ${total.toLocaleString('id-ID')}</td></tr>`;
+  }).join('');
+}
+
+function bTambahIuran(){document.getElementById('b-form-iuran').style.display='block';document.getElementById('b-form-iuran').scrollIntoView({behavior:'smooth'});}
+
+function bBukaInputIuran(anggotaId,nama,tahun,nomLama){
+  document.getElementById('b-iu-nama').value=nama;
+  document.getElementById('b-iu-aid').value=anggotaId;
+  document.getElementById('b-iu-tahun').value=tahun;
+  bSetRp('b-iu-nominal',nomLama);
+  document.getElementById('b-iu-ket').value='';
+  document.getElementById('b-form-iuran').style.display='block';
+  document.getElementById('b-form-iuran').scrollIntoView({behavior:'smooth'});
+  gotoTab('b-iuran');
+}
+
+function bAcAnggota(input,dropId){
+  const q=input.value.trim().toLowerCase(),drop=document.getElementById(dropId);
+  if(!q){drop.style.display='none';return;}
+  const list=allAnggota.filter(a=>a.nama.toLowerCase().includes(q)).slice(0,8);
+  drop.innerHTML=list.map(a=>`<div class="ac-opt" onclick="bPilihAnggota('${esc(a.nama)}','${a.id}','${input.id}','${input.id.replace('nama','aid')}','${dropId}')"><b>${a.nama}</b></div>`).join('');
+  drop.style.display=list.length?'block':'none';
+}
+function bPilihAnggota(nama,id,inputId,hiddenId,dropId){
+  document.getElementById(inputId).value=nama;document.getElementById(hiddenId).value=id;document.getElementById(dropId).style.display='none';
+}
+
+async function bSimpanIuran(){
+  const nama=document.getElementById('b-iu-nama').value.trim();
+  const anggotaId=document.getElementById('b-iu-aid').value;
+  const tahun=parseInt(document.getElementById('b-iu-tahun').value);
+  const nominal=bGetRp('b-iu-nominal');
+  const ket=document.getElementById('b-iu-ket').value.trim();
+  const msg=document.getElementById('b-iu-msg');
+  if(!nama){msg.style.color='var(--red)';msg.textContent='❌ Pilih anggota';return;}
+  if(!nominal){msg.style.color='var(--red)';msg.textContent='❌ Nominal wajib diisi';return;}
+  msg.style.color='var(--teal)';msg.textContent='⏳...';
+  const existQ=await db.from(CFG.tabelIuran).select('id').eq('anggota_id',anggotaId).eq('tahun',tahun).maybeSingle();
+  let err,data2;
+  if(existQ.data){({data:data2,error:err}=await db.from(CFG.tabelIuran).update({nominal,keterangan:ket||null}).eq('id',existQ.data.id).select().single());}
+  else{({data:data2,error:err}=await db.from(CFG.tabelIuran).insert({anggota_id:anggotaId||null,nama,tahun,nominal,keterangan:ket||null}).select().single());}
+  if(err){msg.style.color='var(--red)';msg.textContent='❌ '+err.message;return;}
+  const idx=allIuran.findIndex(iu=>iu.id===(existQ.data?.id||''));
+  if(idx>=0)allIuran[idx]=data2;else allIuran.push(data2);
+  bMuatIuran();bRenderAnggota();
+  msg.style.color='var(--teal)';msg.textContent='✅ Tersimpan!';
+  setTimeout(()=>{msg.textContent='';document.getElementById('b-form-iuran').style.display='none';},2000);
+}
+
+// ── Tab b-galangan ──
+function bMuatGalangan(){
+  const tahun=parseInt(document.getElementById('b-filter-thn-gal')?.value)||new Date().getFullYear();
+  const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
+  const total=jt.reduce((s,j)=>s+(j.galangan||0),0);
+  const ada=jt.filter(j=>j.galangan>0).length;
+  document.getElementById('b-gal-summary').innerHTML=[
+    {v:jt.length,l:'Jadwal '+tahun,bg:'var(--teal-light)'},{v:ada,l:'Ada Galangan',bg:'#E8F5E9'},{v:'Rp '+total.toLocaleString('id-ID'),l:'Total Galangan',bg:'#FEF9EC'},
+  ].map(s=>`<div class="stat-box" style="background:${s.bg}"><div><div class="stat-val" style="font-size:15px">${s.v}</div><div class="stat-lbl">${s.l}</div></div></div>`).join('');
+  const tbody=document.getElementById('b-gal-tbody');
+  if(!jt.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#CCC;padding:30px">Belum ada jadwal tahun '+tahun+'</td></tr>';return;}
+  tbody.innerHTML=jt.map(j=>`<tr>
+    <td class="center" style="color:#AAA;font-size:12px">${j.nomor}</td>
+    <td style="font-weight:700">Partonggoan ${j.nomor}</td>
+    <td style="font-size:12px;color:#666">${j.tanggal||'—'}</td>
+    <td style="font-size:12px">${j.tuan_rumah||'—'}</td>
+    <td class="right">${j.galangan?'<span style="font-weight:700;color:var(--teal)">Rp '+Number(j.galangan).toLocaleString('id-ID')+'</span>':'<span style="color:#CCC">—</span>'}</td>
+    <td class="center">${j.galangan?'<span class="chip chip-teal">✓ Ada</span>':'<span class="chip chip-gray">Belum</span>'}</td>
+    <td><button class="btn-sm btn-sm-teal" onclick="bBukaEditGalangan('${j.id}','P${j.nomor} — ${esc(j.tanggal||'')}',${j.galangan||0})">✏️ Edit</button></td>
+  </tr>`).join('');
+}
+
+function bBukaEditGalangan(id,info,nom){
+  document.getElementById('b-gl-id').value=id;
+  document.getElementById('b-gl-info').value=info;
+  bSetRp('b-gl-nominal',nom);
+  document.getElementById('b-form-galangan').style.display='block';
+  document.getElementById('b-form-galangan').scrollIntoView({behavior:'smooth'});
+}
+async function bSimpanGalangan(){
+  const id=document.getElementById('b-gl-id').value;
+  const nominal=bGetRp('b-gl-nominal');
+  const msg=document.getElementById('b-gl-msg');
+  msg.style.color='var(--teal)';msg.textContent='⏳...';
+  const{data,error}=await db.from(CFG.tabelJadwal).update({galangan:nominal}).eq('id',id).select().single();
+  if(error){msg.style.color='var(--red)';msg.textContent='❌ '+error.message;return;}
+  const idx=jadwalList.findIndex(j=>j.id===id);if(idx>=0)jadwalList[idx]={...jadwalList[idx],...data};
+  bMuatGalangan();
+  msg.style.color='var(--teal)';msg.textContent='✅ Tersimpan & sinkron ke sekretaris!';
+  setTimeout(()=>{msg.textContent='';document.getElementById('b-form-galangan').style.display='none';},2000);
+}
+
+// ── Tab b-pengurus ──
+function bMuatPengurus(){
+  const el=document.getElementById('b-pengurus-list');if(!el)return;
+  const data=pengurusDB.length?pengurusDB:[];
+  if(!data.length){el.innerHTML='<div style="color:#CCC;padding:20px;text-align:center">Belum ada data pengurus</div>';return;}
+  el.innerHTML=data.map(p=>`<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#F8F9FC;border-radius:10px;margin-bottom:8px;border-left:3px solid var(--teal)"><div style="min-width:160px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--teal)">${p.jabatan}</div></div><div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--dark)">${p.nama}</div>${p.no_hp?'<div style="font-size:12px;color:#888;margin-top:2px">📱 '+p.no_hp+'</div>':''}</div></div>`).join('');
+}
+
+// ── Export bendahara ──
+function bEksporExcel(){
+  const YEARS=[];for(let y=CFG.tahunAwal;y<=CFG.tahunAkhir;y++)YEARS.push(y);
+  const hdr=['No','Nama Anggota','Alamat',...YEARS.map(y=>String(y)),'Total'];
+  const rows=allAnggota.map((a,i)=>{let t=0;const c=YEARS.map(y=>{const r=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&iu.tahun===y);const n=r?.nominal||0;if(n)t+=n;return n||'';});return[a.urutan||i+1,a.nama,a.alamat||'',...c,t];});
+  const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[{wch:5},{wch:32},{wch:28},...YEARS.map(()=>({wch:14})),{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'Rekap Iuran');XLSX.writeFile(wb,'Rekap_Iuran_TSBP.xlsx');showToast('✅ Excel iuran diunduh!');
+}
+function bEksporExcelGalangan(){
+  const tahun=parseInt(document.getElementById('b-filter-thn-gal')?.value)||new Date().getFullYear();
+  const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahun))).sort((a,b)=>a.nomor-b.nomor);
+  const hdr=['No','Partonggoan','Tanggal','Tuan Rumah','Galangan (Rp)'];
+  const rows=jt.map(j=>[j.nomor,'Partonggoan '+j.nomor,j.tanggal||'',j.tuan_rumah||'',j.galangan||0]);
+  const t=jt.reduce((s,j)=>s+(j.galangan||0),0);rows.push(['','','','','Total: Rp '+t.toLocaleString('id-ID')]);
+  const wb=XLSX.utils.book_new();const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[{wch:5},{wch:18},{wch:28},{wch:28},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'Galangan '+tahun);XLSX.writeFile(wb,'Galangan_'+tahun+'.xlsx');showToast('✅ Excel galangan diunduh!');
+}
+
+// ── Helpers bendahara ──
+function bGetRp(id){const v=(document.getElementById(id)?.value||'').replace(/\./g,'').replace(/[^\d]/g,'');return parseInt(v)||0;}
+function bSetRp(id,angka){const el=document.getElementById(id);if(!el)return;el.value=angka?Number(angka).toLocaleString('id-ID'):'';}
+
+// ══════════════════════════════════════════════════════
+//  H A L A M A N   I N P U T   T O K E N
+// ══════════════════════════════════════════════════════
+
+function showInputToken(){
+  document.getElementById('page-admin').style.display='none';
+  document.getElementById('page-login').style.display='none';
+  document.getElementById('loading-screen').style.display='none';
+  const pg=document.getElementById('page-input-token');
+  pg.style.display='none';
+  pg.classList.add('show');
+  // isi jadwal & tahun
+  const tahunNow=new Date().getFullYear();
+  const jt=jadwalList.filter(j=>String(j.tanggal||'').includes(String(tahunNow))).sort((a,b)=>a.nomor-b.nomor);
+  const sel=document.getElementById('tk-jadwal');
+  if(sel)sel.innerHTML=jt.length?jt.map(j=>`<option value="${j.id}">P${j.nomor} — ${j.tanggal||'—'} (${j.tuan_rumah||'—'})</option>`).join(''):'<option>Belum ada jadwal</option>';
+  const thnSel=document.getElementById('tk-tahun');
+  if(thnSel){let o='';for(let y=CFG.tahunAwal;y<=CFG.tahunAkhir;y++)o+=`<option value="${y}"${y===tahunNow?'selected':''}>${y}</option>`;thnSel.innerHTML=o;}
+  // Cek sesi token aktif
+  const tokenOk=sessionStorage.getItem('token_ok');
+  const tokenTime=parseInt(sessionStorage.getItem('token_time')||'0');
+  const elapsed=Math.floor((Date.now()-tokenTime)/1000);
+  if(tokenOk==='1'&&elapsed<600){timerSisa=600-elapsed;tampilFormToken();mulaiTimer();}
+}
+
+function cekToken(){
+  const t=document.getElementById('tk-input').value;
+  if(t===CFG.tokenInput){
+    sessionStorage.setItem('token_ok','1');sessionStorage.setItem('token_time',String(Date.now()));
+    timerSisa=600;tampilFormToken();mulaiTimer();
+  } else {document.getElementById('tk-err').style.display='block';}
+}
+function tampilFormToken(){
+  document.getElementById('tk-login-box').style.display='none';
+  document.getElementById('tk-form-box').style.display='block';
+  document.getElementById('tk-strip').style.display='flex';
+  document.getElementById('tk-bar-wrap').style.display='block';
+}
+function mulaiTimer(){
+  if(timerInterval)clearInterval(timerInterval);
+  updateTimerUI();
+  timerInterval=setInterval(()=>{
+    timerSisa--;updateTimerUI();
+    sessionStorage.setItem('token_time',String(Date.now()-((600-timerSisa)*1000)));
+    if(timerSisa<=0)keluarToken();
+  },1000);
+}
+function updateTimerUI(){
+  const m=Math.floor(timerSisa/60).toString().padStart(2,'0');
+  const s=(timerSisa%60).toString().padStart(2,'0');
+  const el=document.getElementById('tk-timer');if(el)el.textContent=m+':'+s;
+  const bar=document.getElementById('tk-bar');if(bar){bar.style.width=(timerSisa/600*100)+'%';if(timerSisa<120)bar.style.background='linear-gradient(90deg,var(--red),#E74C3C)';}
+}
+function kembaliKeLogin(){
+  document.getElementById('page-input-token').classList.remove('show');
+  document.getElementById('page-login').style.display='flex';
+  pilihRole('input');
+}
+function keluarToken(){
+  if(timerInterval)clearInterval(timerInterval);
+  sessionStorage.removeItem('token_ok');sessionStorage.removeItem('token_time');
+  document.getElementById('tk-form-box').style.display='none';
+  document.getElementById('tk-login-box').style.display='block';
+  document.getElementById('tk-strip').style.display='none';
+  document.getElementById('tk-bar-wrap').style.display='none';
+  document.getElementById('tk-input').value='';
+  showToast('⏱️ Sesi berakhir. Masukkan token lagi.');
+}
+function tkSwitchTab(t){
+  document.getElementById('tk-form-iuran').style.display=t==='iuran'?'block':'none';
+  document.getElementById('tk-form-galangan').style.display=t==='galangan'?'block':'none';
+  document.querySelectorAll('.tab-input-sw button').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='iuran')||(i===1&&t==='galangan')));
+}
+function tkAc(input,dropId){
+  const q=input.value.trim().toLowerCase(),drop=document.getElementById(dropId);
+  if(!q){drop.style.display='none';return;}
+  const list=allAnggota.filter(a=>a.nama.toLowerCase().includes(q)).slice(0,8);
+  drop.innerHTML=list.map(a=>`<div class="ac-opt" onclick="tkPilih('${esc(a.nama)}','${a.id}')"><b>${a.nama}</b></div>`).join('');
+  drop.style.display=list.length?'block':'none';
+}
+function tkPilih(nama,id){document.getElementById('tk-nama').value=nama;document.getElementById('tk-aid').value=id;document.getElementById('tk-drop').style.display='none';}
+async function tkKirimIuran(){
+  const nama=document.getElementById('tk-nama').value.trim();
+  const anggotaId=document.getElementById('tk-aid').value;
+  const tahun=document.getElementById('tk-tahun').value;
+  const nominal=bGetRp('tk-nominal');
+  const ket=document.getElementById('tk-ket').value.trim();
+  const msg=document.getElementById('tk-iu-msg');
+  if(!nama){msg.style.color='var(--red)';msg.textContent='❌ Pilih nama anggota';return;}
+  if(!nominal){msg.style.color='var(--red)';msg.textContent='❌ Nominal wajib diisi';return;}
+  msg.style.color='var(--teal)';msg.textContent='⏳ Menyimpan...';
+  const existQ=await db.from(CFG.tabelIuran).select('id').eq('anggota_id',anggotaId).eq('tahun',tahun).maybeSingle();
+  let err;
+  if(existQ.data){({error:err}=await db.from(CFG.tabelIuran).update({nominal,keterangan:ket||null}).eq('id',existQ.data.id));}
+  else{({error:err}=await db.from(CFG.tabelIuran).insert({anggota_id:anggotaId||null,nama,tahun:parseInt(tahun),nominal,keterangan:ket||null}));}
+  if(err){msg.style.color='var(--red)';msg.textContent='❌ '+err.message;return;}
+  msg.style.color='var(--teal)';msg.textContent=`✅ Iuran ${nama} tahun ${tahun} (Rp ${nominal.toLocaleString('id-ID')}) tersimpan!`;
+  document.getElementById('tk-nama').value='';document.getElementById('tk-aid').value='';
+  bSetRp('tk-nominal',0);document.getElementById('tk-ket').value='';
+  setTimeout(()=>msg.textContent='',5000);
+}
+async function tkKirimGalangan(){
+  const jadwalId=document.getElementById('tk-jadwal').value;
+  const nominal=bGetRp('tk-gl-nominal');
+  const msg=document.getElementById('tk-gl-msg');
+  if(!nominal){msg.style.color='var(--red)';msg.textContent='❌ Nominal wajib diisi';return;}
+  msg.style.color='var(--teal)';msg.textContent='⏳ Menyimpan...';
+  const{data,error}=await db.from(CFG.tabelJadwal).update({galangan:nominal}).eq('id',jadwalId).select().single();
+  if(error){msg.style.color='var(--red)';msg.textContent='❌ '+error.message;return;}
+  const idx=jadwalList.findIndex(j=>j.id===jadwalId);if(idx>=0)jadwalList[idx]={...jadwalList[idx],...data};
+  const jd=jadwalList.find(j=>j.id===jadwalId);
+  msg.style.color='var(--teal)';msg.textContent=`✅ Galangan P${jd?.nomor||''} (Rp ${nominal.toLocaleString('id-ID')}) tersimpan & sinkron!`;
+  bSetRp('tk-gl-nominal',0);setTimeout(()=>msg.textContent='',5000);
 }
 
 init();
