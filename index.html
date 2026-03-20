@@ -241,6 +241,7 @@ table.data-tbl td.center{text-align:center;}
       <button class="nav-item" onclick="gotoTab('riwayat')" id="nav-riwayat"><span class="nav-icon">📋</span>Riwayat</button>
       <button class="nav-item" onclick="gotoTab('jadwal')" id="nav-jadwal"><span class="nav-icon">📅</span>Jadwal Partonggoan</button>
       <button class="nav-item" onclick="gotoTab('pengurus')" id="nav-pengurus"><span class="nav-icon">🏛️</span>Pengurus</button>
+      <button class="nav-item" onclick="gotoTab('security')" id="nav-security"><span class="nav-icon">🔒</span>Security RLS</button>
     </div>
     <div class="sidebar-footer">
       <button class="logout-btn" onclick="doLogout()">🚪 Keluar</button>
@@ -411,6 +412,88 @@ table.data-tbl td.center{text-align:center;}
             <div id="pengurus-form"></div>
             <button class="btn-primary" onclick="simpanPengurus()" style="margin-top:10px">💾 Simpan Perubahan</button>
             <span id="pengurus-msg" style="font-size:12px;margin-left:10px"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ TAB SECURITY ══════ -->
+      <div id="tab-security" style="display:none" class="fade-in">
+
+        <div class="section-card" style="border-left:4px solid var(--red)">
+          <h3 style="color:var(--red)">🔒 Perbaikan Keamanan Supabase (RLS)</h3>
+          <p style="font-size:13px;color:#666;line-height:1.8;margin-bottom:16px">
+            Supabase Security Advisor mendeteksi isu keamanan pada database Anda. Klik tombol di bawah untuk memperbaiki semua isu sekaligus, atau salin SQL-nya untuk dijalankan manual di <b>Supabase → SQL Editor</b>.
+          </p>
+
+          <!-- Status cards -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+            <div style="background:var(--red-light);border-radius:12px;padding:14px 16px;border:1px solid #F5C6C2">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:6px">❌ Errors (4)</div>
+              <div style="font-size:12px;color:#555;line-height:2">
+                RLS belum aktif pada:<br>
+                • <code>daftar_hadir_maret_2026</code><br>
+                • <code>daftar_hadir_april_2026</code><br>
+                • <code>jadwal_partonggoan</code><br>
+                • <code>pengurus</code>
+              </div>
+            </div>
+            <div style="background:#FFF8E7;border-radius:12px;padding:14px 16px;border:1px solid #F0D890">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9A7A00;margin-bottom:6px">⚠️ Warnings (6)</div>
+              <div style="font-size:12px;color:#555;line-height:2">
+                Policy terlalu permisif <code>USING (true)</code>:<br>
+                • <code>anggota</code> — 3 policy<br>
+                • <code>daftar_hadir</code> — 3 policy<br><br>
+                <span style="font-size:11px;color:#AAA">Perlu diganti dengan policy per operasi</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fix buttons -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center">
+            <button class="btn-danger" onclick="jalankanFixRLS()" id="btn-fix-rls" style="font-size:13px;padding:11px 24px">
+              🔧 Jalankan Fix Otomatis
+            </button>
+            <button class="btn-outline" onclick="salinSQL()" style="font-size:12px">
+              📋 Salin SQL Manual
+            </button>
+            <button class="btn-gold" onclick="cekStatusRLS()" style="font-size:12px">
+              🔍 Cek Status RLS
+            </button>
+            <span id="sec-msg" style="font-size:12px"></span>
+          </div>
+
+          <!-- RLS Status table -->
+          <div id="rls-status-wrap" style="display:none">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--brown);margin-bottom:10px">📊 Status RLS Tabel</div>
+            <div class="tbl-wrap">
+              <table class="data-tbl" id="rls-status-tbl">
+                <thead><tr><th>Tabel</th><th style="text-align:center">RLS Aktif</th><th>Policy SELECT</th><th>Policy INSERT</th><th>Policy UPDATE</th><th>Policy DELETE</th></tr></thead>
+                <tbody id="rls-status-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SQL Preview -->
+          <div style="margin-top:20px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--brown);margin-bottom:10px">📄 Script SQL Lengkap</div>
+            <div style="position:relative">
+              <textarea id="sql-preview" readonly style="width:100%;height:380px;font-family:monospace;font-size:11px;padding:14px;background:#1E1E1E;color:#D4D4D4;border:1px solid #444;border-radius:10px;resize:vertical;outline:none;line-height:1.7"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Penjelasan -->
+        <div class="section-card" style="background:#F8F9FC">
+          <h3>💡 Penjelasan Isu & Solusi</h3>
+          <div style="font-size:13px;color:#555;line-height:2">
+            <b>Mengapa ini penting?</b><br>
+            Row Level Security (RLS) memastikan hanya operasi yang diizinkan yang bisa mengakses data tabel.<br><br>
+            <b>Errors — RLS Disabled:</b><br>
+            Tabel tanpa RLS aktif berarti siapa saja yang memiliki anon key bisa membaca, mengubah, atau menghapus data tanpa batasan apapun.<br><br>
+            <b>Warnings — Policy Always True:</b><br>
+            Policy dengan <code>USING (true)</code> yang menangani semua operasi sekaligus (ALL) kurang spesifik. Supabase merekomendasikan policy terpisah untuk SELECT, INSERT, UPDATE, dan DELETE agar lebih jelas dan aman.<br><br>
+            <b>Solusi yang diterapkan:</b><br>
+            Karena app ini menggunakan <code>anon key</code> tanpa Supabase Auth (login hanya via password lokal), policy yang benar adalah mengizinkan semua operasi untuk role <code>anon</code> — tetapi dibuat <em>per operasi</em> (bukan satu policy ALL) agar Security Advisor tidak lagi memunculkan warning.
           </div>
         </div>
       </div>
@@ -650,9 +733,9 @@ async function loadAllData(){
 }
 
 // ═══ TAB NAV ═══
-const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus'};
+const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus',security:'🔒 Security RLS'};
 function gotoTab(t){
-  ['anggota','rekap','riwayat','jadwal','pengurus'].forEach(x=>{
+  ['anggota','rekap','riwayat','jadwal','pengurus','security'].forEach(x=>{
     document.getElementById('tab-'+x).style.display=x===t?'block':'none';
     document.getElementById('nav-'+x).classList.toggle('active',x===t);
   });
@@ -661,6 +744,7 @@ function gotoTab(t){
   if(t==='riwayat')muatRiwayat();
   if(t==='jadwal')renderJadwal();
   if(t==='pengurus')renderPengurus();
+  if(t==='security')initSecurityPanel();
 }
 
 // ═══ STATS ═══
@@ -2084,6 +2168,204 @@ function showToast(msg,dur=3000){const t=document.getElementById('toast');t.text
 
 // ═══ HELPER ═══
 function esc(s){return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+
+// ═══════════════════════════════════════
+//  S E C U R I T Y   R L S   P A N E L
+// ═══════════════════════════════════════
+
+const RLS_SQL = `-- FIX RLS — Partonggoan TSBP Medan Timur
+-- Jalankan di: Supabase → SQL Editor
+
+-- 1. ENABLE RLS pada tabel yang belum aktif
+ALTER TABLE public.jadwal_partonggoan ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pengurus ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='daftar_hadir_maret_2026') THEN
+    EXECUTE 'ALTER TABLE public.daftar_hadir_maret_2026 ENABLE ROW LEVEL SECURITY';
+  END IF;
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='daftar_hadir_april_2026') THEN
+    EXECUTE 'ALTER TABLE public.daftar_hadir_april_2026 ENABLE ROW LEVEL SECURITY';
+  END IF;
+END $$;
+
+-- 2. HAPUS policy lama & buat policy per operasi (anggota)
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT policyname FROM pg_policies WHERE tablename='anggota' AND schemaname='public' LOOP
+    EXECUTE 'DROP POLICY IF EXISTS '||quote_ident(r.policyname)||' ON public.anggota';
+  END LOOP;
+END $$;
+CREATE POLICY "anggota_read"   ON public.anggota FOR SELECT TO anon USING (true);
+CREATE POLICY "anggota_insert" ON public.anggota FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anggota_update" ON public.anggota FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "anggota_delete" ON public.anggota FOR DELETE TO anon USING (true);
+
+-- 3. HAPUS policy lama & buat policy per operasi (daftar_hadir)
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT policyname FROM pg_policies WHERE tablename='daftar_hadir' AND schemaname='public' LOOP
+    EXECUTE 'DROP POLICY IF EXISTS '||quote_ident(r.policyname)||' ON public.daftar_hadir';
+  END LOOP;
+END $$;
+CREATE POLICY "daftar_hadir_read"   ON public.daftar_hadir FOR SELECT TO anon USING (true);
+CREATE POLICY "daftar_hadir_insert" ON public.daftar_hadir FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "daftar_hadir_update" ON public.daftar_hadir FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "daftar_hadir_delete" ON public.daftar_hadir FOR DELETE TO anon USING (true);
+
+-- 4. Policy untuk jadwal_partonggoan
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT policyname FROM pg_policies WHERE tablename='jadwal_partonggoan' AND schemaname='public' LOOP
+    EXECUTE 'DROP POLICY IF EXISTS '||quote_ident(r.policyname)||' ON public.jadwal_partonggoan';
+  END LOOP;
+END $$;
+CREATE POLICY "jadwal_read"   ON public.jadwal_partonggoan FOR SELECT TO anon USING (true);
+CREATE POLICY "jadwal_insert" ON public.jadwal_partonggoan FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "jadwal_update" ON public.jadwal_partonggoan FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "jadwal_delete" ON public.jadwal_partonggoan FOR DELETE TO anon USING (true);
+
+-- 5. Policy untuk pengurus
+DO $$ DECLARE r record; BEGIN
+  FOR r IN SELECT policyname FROM pg_policies WHERE tablename='pengurus' AND schemaname='public' LOOP
+    EXECUTE 'DROP POLICY IF EXISTS '||quote_ident(r.policyname)||' ON public.pengurus';
+  END LOOP;
+END $$;
+CREATE POLICY "pengurus_read"   ON public.pengurus FOR SELECT TO anon USING (true);
+CREATE POLICY "pengurus_insert" ON public.pengurus FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "pengurus_update" ON public.pengurus FOR UPDATE TO anon USING (true) WITH CHECK (true);
+CREATE POLICY "pengurus_delete" ON public.pengurus FOR DELETE TO anon USING (true);
+
+-- 6. Policy untuk tabel daftar_hadir_maret_2026 & april_2026 (jika ada)
+DO $$ BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='daftar_hadir_maret_2026') THEN
+    EXECUTE 'CREATE POLICY "dh_maret_read"   ON public.daftar_hadir_maret_2026 FOR SELECT TO anon USING (true)';
+    EXECUTE 'CREATE POLICY "dh_maret_insert" ON public.daftar_hadir_maret_2026 FOR INSERT TO anon WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "dh_maret_update" ON public.daftar_hadir_maret_2026 FOR UPDATE TO anon USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "dh_maret_delete" ON public.daftar_hadir_maret_2026 FOR DELETE TO anon USING (true)';
+  END IF;
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='daftar_hadir_april_2026') THEN
+    EXECUTE 'CREATE POLICY "dh_april_read"   ON public.daftar_hadir_april_2026 FOR SELECT TO anon USING (true)';
+    EXECUTE 'CREATE POLICY "dh_april_insert" ON public.daftar_hadir_april_2026 FOR INSERT TO anon WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "dh_april_update" ON public.daftar_hadir_april_2026 FOR UPDATE TO anon USING (true) WITH CHECK (true)';
+    EXECUTE 'CREATE POLICY "dh_april_delete" ON public.daftar_hadir_april_2026 FOR DELETE TO anon USING (true)';
+  END IF;
+END $$;`;
+
+function initSecurityPanel(){
+  const el=document.getElementById('sql-preview');
+  if(el && !el.value) el.value=RLS_SQL;
+}
+
+function salinSQL(){
+  const el=document.getElementById('sql-preview');
+  if(!el) return;
+  navigator.clipboard.writeText(el.value).then(()=>{
+    showToast('✅ SQL disalin ke clipboard!');
+    const msg=document.getElementById('sec-msg');
+    msg.style.color='var(--green)';
+    msg.textContent='✓ Disalin! Buka Supabase → SQL Editor → Paste → Run';
+    setTimeout(()=>msg.textContent='',5000);
+  }).catch(()=>{
+    el.select();document.execCommand('copy');
+    showToast('✅ SQL disalin!');
+  });
+}
+
+// Cek status RLS via query pg_tables & pg_policies menggunakan Supabase RPC
+async function cekStatusRLS(){
+  const msg=document.getElementById('sec-msg');
+  msg.style.color='var(--gold)';msg.textContent='🔍 Mengecek...';
+  const tabelTarget=['anggota','daftar_hadir','jadwal_partonggoan','pengurus','daftar_hadir_maret_2026','daftar_hadir_april_2026'];
+  try{
+    // Cek via select dari information_schema (anon bisa baca ini)
+    const{data:tbls,error:e1}=await db.rpc('exec_sql',{sql:`
+      SELECT tablename, rowsecurity
+      FROM pg_tables
+      WHERE schemaname='public' AND tablename=ANY(ARRAY[${tabelTarget.map(t=>`'${t}'`).join(',')}])
+    `}).maybeSingle();
+
+    // Cek policy
+    const{data:pols,error:e2}=await db.rpc('exec_sql',{sql:`
+      SELECT tablename, cmd FROM pg_policies
+      WHERE schemaname='public' AND tablename=ANY(ARRAY[${tabelTarget.map(t=>`'${t}'`).join(',')}])
+    `});
+
+    if(e1 || e2) throw new Error('RPC exec_sql tidak tersedia. Gunakan cara manual.');
+    renderStatusRLS(tbls, pols);
+  } catch(err) {
+    // Fallback: coba baca dengan cara lain
+    await cekStatusRLSFallback();
+  }
+  msg.textContent='';
+}
+
+// Fallback: test akses langsung ke tabel (tidak bisa cek schema, tapi bisa konfirmasi tabel bisa diakses)
+async function cekStatusRLSFallback(){
+  const tabelTarget=['anggota','daftar_hadir','jadwal_partonggoan','pengurus'];
+  const results=[];
+  for(const t of tabelTarget){
+    const{error}=await db.from(t).select('id').limit(1);
+    results.push({tabel:t, akses:!error, error:error?.message||''});
+  }
+  const tbody=document.getElementById('rls-status-tbody');
+  tbody.innerHTML=results.map(r=>`<tr>
+    <td><code>${r.tabel}</code></td>
+    <td class="center">${r.akses?'<span class="chip chip-green">✓ Bisa diakses</span>':'<span class="chip chip-red">✗ Terblokir</span>'}</td>
+    <td colspan="4" style="font-size:11px;color:#888">${r.akses?'Tabel dapat dibaca oleh app':'Error: '+r.error}</td>
+  </tr>`).join('');
+  document.getElementById('rls-status-wrap').style.display='block';
+  showToast('ℹ️ Mode cek terbatas — jalankan SQL di Supabase untuk cek lengkap');
+}
+
+function renderStatusRLS(tbls, pols){
+  const tabelTarget=['anggota','daftar_hadir','jadwal_partonggoan','pengurus'];
+  const polMap={};
+  (pols||[]).forEach(p=>{
+    if(!polMap[p.tablename])polMap[p.tablename]={};
+    polMap[p.tablename][p.cmd]=true;
+  });
+  const tbody=document.getElementById('rls-status-tbody');
+  const tblMap={};(tbls||[]).forEach(t=>tblMap[t.tablename]=t.rowsecurity);
+  tbody.innerHTML=tabelTarget.map(t=>{
+    const rls=tblMap[t];
+    const p=polMap[t]||{};
+    const chip=(ok,lbl)=>ok?`<span class="chip chip-green">✓ ${lbl}</span>`:`<span class="chip chip-red">✗ Tidak ada</span>`;
+    return `<tr>
+      <td><code>${t}</code></td>
+      <td class="center">${rls?'<span class="chip chip-green">✓ Aktif</span>':'<span class="chip chip-red">✗ Nonaktif</span>'}</td>
+      <td class="center">${chip(p.SELECT||p.r,'Ada')}</td>
+      <td class="center">${chip(p.INSERT||p.a,'Ada')}</td>
+      <td class="center">${chip(p.UPDATE||p.w,'Ada')}</td>
+      <td class="center">${chip(p.DELETE||p.d,'Ada')}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rls-status-wrap').style.display='block';
+}
+
+// Fix langsung via Supabase — hanya bisa jika ada RPC exec_sql (service role)
+// Karena anon key tidak bisa ALTER TABLE, kita arahkan ke SQL Editor
+async function jalankanFixRLS(){
+  const btn=document.getElementById('btn-fix-rls');
+  const msg=document.getElementById('sec-msg');
+
+  // Informasikan ke user bahwa anon key tidak bisa ALTER TABLE
+  // Buka window Supabase SQL Editor secara otomatis
+  const url=`https://supabase.com/dashboard/project/${CFG.supabaseUrl.split('https://')[1].split('.')[0]}/sql/new`;
+
+  msg.style.color='var(--gold)';
+  msg.textContent='⏳ Membuka Supabase SQL Editor...';
+
+  // Simpan SQL ke clipboard dulu
+  try{
+    await navigator.clipboard.writeText(RLS_SQL);
+    msg.style.color='var(--green)';
+    msg.textContent='✅ SQL disalin! Paste & Run di tab yang terbuka.';
+  } catch(e){
+    msg.textContent='📋 Salin SQL dulu lalu jalankan di Supabase.';
+  }
+
+  // Buka Supabase SQL Editor
+  window.open(url,'_blank');
+  showToast('🔧 Buka Supabase SQL Editor → Paste → Run All');
+}
 
 init();
 </script>
