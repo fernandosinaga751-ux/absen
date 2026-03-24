@@ -279,7 +279,37 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
 #member-kartu{background:white;font-family:'Lato',sans-serif;}
 .mkard-header{background:linear-gradient(135deg,var(--dark) 0%,#6B3F2A 100%);padding:22px 24px 18px;position:relative;}
 .mkard-header-top{display:flex;align-items:center;gap:14px;}
-.mkard-avatar-lg{width:62px;height:62px;border-radius:16px;background:linear-gradient(135deg,var(--gold),#A0782A);display:flex;align-items:center;justify-content:center;color:white;font-family:'Playfair Display',serif;font-size:26px;font-weight:700;flex-shrink:0;border:2px solid rgba(255,255,255,.25);}
+.mkard-avatar-lg{width:62px;height:62px;border-radius:16px;background:linear-gradient(135deg,var(--gold),#A0782A);display:flex;align-items:center;justify-content:center;color:white;font-family:'Playfair Display',serif;font-size:26px;font-weight:700;flex-shrink:0;border:2px solid rgba(255,255,255,.25);overflow:hidden;}
+.mkard-avatar-lg img{width:100%;height:100%;object-fit:cover;border-radius:14px;}
+
+/* ── FOTO UPLOAD ── */
+.foto-upload-zone{border:2px dashed rgba(255,255,255,.3);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:all .2s;margin-top:10px;background:rgba(255,255,255,.05);}
+.foto-upload-zone:hover{border-color:var(--gold);background:rgba(196,154,74,.1);}
+.foto-upload-zone input[type=file]{display:none;}
+.foto-upload-zone p{font-size:11px;color:rgba(255,255,255,.5);margin:4px 0 0;}
+.foto-pending-badge{font-size:10px;background:#FEF9EC;color:#9A7800;padding:2px 8px;border-radius:7px;font-weight:700;display:inline-block;margin-top:6px;}
+
+/* ── IURAN MULTI-TAHUN ── */
+.mkard-iuran-tahun-wrap{padding:12px 20px;border-bottom:1px solid #F0F2F5;}
+.mkard-iuran-tahun-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--brown);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.iuran-tahun-grid{display:flex;flex-direction:column;gap:7px;}
+.iuran-tahun-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:9px;background:#F8F9FC;}
+.iuran-tahun-row.lunas{background:var(--teal-light);}
+.iuran-tahun-row.sebagian{background:#FEF9EC;}
+.iuran-tahun-row.belum{background:#F8F9FC;}
+.iuran-tahun-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.iuran-tahun-lbl{font-size:11px;font-weight:700;color:#888;min-width:36px;}
+.iuran-tahun-nom{font-size:13px;font-weight:700;flex:1;color:var(--dark);}
+.iuran-tahun-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:7px;white-space:nowrap;}
+
+/* ── FOTO APPROVAL (admin) ── */
+.foto-approval-card{background:white;border-radius:12px;border:1.5px solid var(--gold-light);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.foto-approval-img{width:52px;height:52px;border-radius:12px;object-fit:cover;border:2px solid var(--gold-light);flex-shrink:0;}
+.foto-approval-info{flex:1;}
+.foto-approval-name{font-size:14px;font-weight:700;color:var(--dark);}
+.foto-approval-time{font-size:11px;color:#AAA;margin-top:2px;}
+.foto-approval-actions{display:flex;gap:8px;flex-shrink:0;}
+
 .mkard-title{color:white;}
 .mkard-title h2{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:2px;}
 .mkard-title p{font-size:11px;color:rgba(255,255,255,.55);margin:0;}
@@ -387,6 +417,11 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
           <div class="stat-box"><div class="stat-icon" style="background:#EEF4EE">👥</div><div><div class="stat-val" id="stat-anggota">—</div><div class="stat-lbl">Total Anggota</div></div></div>
           <div class="stat-box"><div class="stat-icon" style="background:#EEF4EE">📅</div><div><div class="stat-val" id="stat-bln">—</div><div class="stat-lbl">Absen Bulan Ini</div></div></div>
           <div class="stat-box"><div class="stat-icon" style="background:#FEF9EC">📆</div><div><div class="stat-val" id="stat-thn">—</div><div class="stat-lbl">Absen Tahun Ini</div></div></div>
+        </div>
+
+        <div class="section-card" id="foto-approval-section" style="display:none">
+          <h3>📷 Persetujuan Foto Anggota <span id="foto-approval-count" style="background:var(--red);color:white;border-radius:8px;padding:1px 8px;font-size:12px;margin-left:6px">0</span></h3>
+          <div id="foto-approval-list"></div>
         </div>
 
         <div class="section-card">
@@ -925,6 +960,16 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
           </div>
         </div>
         <div class="mkard-no-badge" id="pub-no-badge">#—</div>
+        <!-- Upload Foto -->
+        <div class="foto-upload-zone" onclick="document.getElementById('pub-foto-input').click()" id="pub-foto-zone">
+          <input type="file" id="pub-foto-input" accept="image/*" onchange="uploadFotoAnggota(this)"/>
+          <div style="font-size:18px">📷</div>
+          <p>Upload foto profil</p>
+          <p style="font-size:10px;opacity:.6">Menunggu persetujuan admin</p>
+        </div>
+        <div id="pub-foto-pending" style="display:none;text-align:center;margin-top:10px">
+          <span class="foto-pending-badge">⏳ Foto menunggu persetujuan admin</span>
+        </div>
       </div>
       <!-- Stats -->
       <div class="mkard-stats">
@@ -933,18 +978,19 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
         <div class="mkard-stat"><div class="mkard-stat-val" id="pub-s-petugas" style="color:var(--blue)">0</div><div class="mkard-stat-lbl">Jadi Petugas</div></div>
         <div class="mkard-stat"><div class="mkard-stat-val" id="pub-s-tuan" style="color:var(--gold)">0</div><div class="mkard-stat-lbl">Tuan Rumah</div></div>
       </div>
-      <!-- Iuran -->
-      <div class="mkard-iuran" id="pub-iuran-row">
-        <div class="mkard-iuran-icon" id="pub-iuran-icon" style="background:var(--green-light)">💳</div>
-        <div class="mkard-iuran-info">
-          <div class="mkard-iuran-label">Iuran 2026</div>
-          <div class="mkard-iuran-val" id="pub-iuran-nominal">—</div>
+      <!-- Iuran Multi-Tahun -->
+      <div class="mkard-iuran-tahun-wrap">
+        <div class="mkard-iuran-tahun-title">💳 Riwayat Iuran</div>
+        <div class="iuran-tahun-grid" id="pub-iuran-grid">
+          <div style="color:#CCC;font-size:12px">Memuat data iuran...</div>
         </div>
-        <div class="mkard-iuran-status" id="pub-iuran-status">—</div>
       </div>
       <!-- Kehadiran -->
       <div class="mkard-section">
-        <div class="mkard-section-title">✅ Kehadiran per Partonggoan</div>
+        <div class="mkard-section-title" style="justify-content:space-between">
+          <span>✅ Kehadiran per Partonggoan</span>
+          <select id="pub-tahun-filter" onchange="filterPublikTahun()" style="font-size:10px;padding:2px 6px;border:1px solid #E8E0D5;border-radius:6px;background:#F8F9FC;color:var(--dark);font-family:'Lato',sans-serif;cursor:pointer"></select>
+        </div>
         <div class="mkard-hadir-grid" id="pub-hadir-grid"></div>
         <div id="pub-hadir-empty" style="display:none;color:#CCC;font-size:13px;padding:4px 0">Belum ada data kehadiran</div>
       </div>
@@ -1102,8 +1148,6 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
         </div>
         <div class="mkard-no-badge" id="da-no-badge">#—</div>
       </div>
-
-      <!-- Stats Row: Total Hadir | Total Jadwal | Jadi Petugas | Tuan Rumah -->
       <div class="mkard-stats">
         <div class="mkard-stat">
           <div class="mkard-stat-val" id="da-s-hadir" style="color:var(--green)">0</div>
@@ -1123,19 +1167,20 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
         </div>
       </div>
 
-      <!-- Iuran 2026 (konek dari bendahara) -->
-      <div class="mkard-iuran" id="da-iuran-row">
-        <div class="mkard-iuran-icon" id="da-iuran-icon" style="background:var(--green-light)">💳</div>
-        <div class="mkard-iuran-info">
-          <div class="mkard-iuran-label">Iuran 2026</div>
-          <div class="mkard-iuran-val" id="da-iuran-nominal">—</div>
+      <!-- Iuran Multi-Tahun (konek dari bendahara) -->
+      <div class="mkard-iuran-tahun-wrap">
+        <div class="mkard-iuran-tahun-title">💳 Riwayat Iuran</div>
+        <div class="iuran-tahun-grid" id="da-iuran-grid">
+          <div style="color:#CCC;font-size:12px">Memuat data iuran...</div>
         </div>
-        <div class="mkard-iuran-status" id="da-iuran-status">—</div>
       </div>
 
       <!-- Riwayat Kehadiran per Partonggoan (dot grid) -->
       <div class="mkard-section">
-        <div class="mkard-section-title">✅ Kehadiran per Partonggoan</div>
+        <div class="mkard-section-title" style="justify-content:space-between">
+          <span>✅ Kehadiran per Partonggoan</span>
+          <select id="da-tahun-filter" onchange="filterAdminTahun()" style="font-size:10px;padding:2px 6px;border:1px solid #E8E0D5;border-radius:6px;background:#F8F9FC;color:var(--dark);font-family:'Lato',sans-serif;cursor:pointer"></select>
+        </div>
         <div class="mkard-hadir-grid" id="da-hadir-grid"></div>
         <div id="da-hadir-empty" style="display:none;color:#CCC;font-size:13px;padding:4px 0">Belum ada data kehadiran</div>
       </div>
@@ -1240,6 +1285,7 @@ const CFG = {
   tabelJadwal  : "jadwal_partonggoan",
   tabelPengurus: "pengurus",
   tabelIuran   : "iuran_anggota",
+  tabelFoto    : "foto_anggota",   // tabel baru untuk foto anggota
   adminPass    : "admin123",       // sekretaris
   bendaharaPass: "bendahara2024",  // bendahara
   tokenInput   : "input2024",      // token halaman input
@@ -1261,6 +1307,18 @@ async function init(){
   // ── Cek hash publik (#nomor) — tampilkan kartu tanpa login ──
   const hashVal=window.location.hash.replace('#','');
   if(hashVal&&!isNaN(hashVal)&&parseInt(hashVal)>0){
+    // Pasang listener realtime untuk hash change (ganti nomor anggota tanpa reload)
+    window.addEventListener('hashchange',async()=>{
+      const h=window.location.hash.replace('#','');
+      if(h&&!isNaN(h)&&parseInt(h)>0){
+        // Reset state card
+        document.getElementById('publik-loading').style.display='block';
+        document.getElementById('publik-kartu-wrap').style.display='none';
+        document.getElementById('publik-error').style.display='none';
+        document.getElementById('publik-actions').style.display='none';
+        await tampilKartuPublik(parseInt(h));
+      }
+    });
     await tampilKartuPublik(parseInt(hashVal));
     return;
   }
@@ -1408,6 +1466,8 @@ function showAdmin(role){
     renderAnggota(allAnggota);muatStats();isiTahunSel();muatRekap();muatRiwayat();renderJadwal();
     gotoTab('anggota');
     cekHashAnggota();
+    // Muat foto pending untuk persetujuan
+    muat_foto_pending().catch(()=>{});
   }
 }
 
@@ -1425,6 +1485,11 @@ async function loadAllData(){
   if(!jadwalList.length) await seedJadwal();
   if(!pengurusDB.length) await seedPengurus();
   try{const{data}=await db.from(CFG.tabelIuran).select('*');allIuran=(data||[]).map(r=>({...r,nominal:Number(r.nominal||0)}));}catch(e){allIuran=[];console.warn('iuran_anggota not ready');}
+  // Muat foto approved dan tempelkan ke objek anggota
+  try{
+    const{data:fotoData}=await db.from(CFG.tabelFoto).select('anggota_id,nama,foto_url').eq('status','approved');
+    if(fotoData){ fotoData.forEach(f=>{ const a=allAnggota.find(x=>x.id===f.anggota_id||x.nama===f.nama); if(a) a._foto_url=f.foto_url; }); }
+  }catch(e){console.warn('foto_anggota table not ready yet');}
 }
 
 async function loadPublicData(){
@@ -1624,8 +1689,19 @@ function bukaDetailAnggota(id){
   // Set URL hash
   window.location.hash=nomor;
 
+  // Foto profil
+  const avatarEl=document.getElementById('da-avatar');
+  if(a._foto_url){
+    avatarEl.innerHTML=`<img src="${a._foto_url}" alt="${a.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>`;
+  } else {
+    // Coba ambil dari approved foto
+    db.from(CFG.tabelFoto).select('foto_url').eq('anggota_id',a.id).eq('status','approved').maybeSingle()
+      .then(r=>{ if(r.data?.foto_url){ a._foto_url=r.data.foto_url; avatarEl.innerHTML=`<img src="${a._foto_url}" alt="${a.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>`; } })
+      .catch(()=>{});
+    avatarEl.textContent=a.nama[0].toUpperCase();
+  }
+
   // Header
-  document.getElementById('da-avatar').textContent=a.nama[0].toUpperCase();
   document.getElementById('da-nama').textContent=a.nama;
   document.getElementById('da-sub').textContent=(a.no_hp||'Tanpa HP')+' · '+(a.alamat||'Tanpa Alamat');
   document.getElementById('da-no-badge').textContent='#'+nomor;
@@ -1647,43 +1723,20 @@ function bukaDetailAnggota(id){
   document.getElementById('da-s-petugas').textContent=peranList.length;
   document.getElementById('da-s-tuan').textContent=jTR.length;
 
-  // Iuran 2026 — ambil dari allIuran (data bendahara)
-  const TAHUN_IU=2026;
-  const recIuran=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&Number(iu.tahun||0)===TAHUN_IU);
-  const nomIuran=recIuran?Number(recIuran.nominal||0):0;
-  const fmtRp=n=>'Rp '+n.toLocaleString('id-ID');
-  const iuranIcon=document.getElementById('da-iuran-icon');
-  const iuranNom=document.getElementById('da-iuran-nominal');
-  const iuranSts=document.getElementById('da-iuran-status');
-  if(nomIuran>=IU_TARGET){
-    iuranIcon.style.background='var(--teal-light)';iuranIcon.textContent='✅';
-    iuranNom.textContent=fmtRp(nomIuran);
-    iuranSts.textContent='LUNAS';iuranSts.style.background='var(--teal-light)';iuranSts.style.color='var(--teal)';
-  } else if(nomIuran>0){
-    iuranIcon.style.background='#FEF9EC';iuranIcon.textContent='⚠️';
-    iuranNom.textContent=fmtRp(nomIuran)+' / '+fmtRp(IU_TARGET);
-    iuranSts.textContent='SEBAGIAN';iuranSts.style.background='#FEF9EC';iuranSts.style.color='#9A7800';
-  } else {
-    iuranIcon.style.background='var(--red-light)';iuranIcon.textContent='❌';
-    iuranNom.textContent='Belum bayar';
-    iuranSts.textContent='BELUM';iuranSts.style.background='var(--red-light)';iuranSts.style.color='var(--red)';
-  }
+  // Iuran multi-tahun
+  document.getElementById('da-iuran-grid').innerHTML=buildIuranTahunHTML(a,allIuran);
 
-  // Dot Grid kehadiran per partonggoan
-  const sortedJadwal=[...jadwalList].sort((a,b)=>a.nomor-b.nomor);
-  const grid=document.getElementById('da-hadir-grid');
-  const empty=document.getElementById('da-hadir-empty');
-  if(sortedJadwal.length){
-    empty.style.display='none';
-    const hadirTanggal=new Set(absenAnggota.map(ab=>ab.tanggal_acara));
-    grid.innerHTML=sortedJadwal.map(j=>{
-      const hadir=hadirTanggal.has(j.tanggal);
-      return `<div class="mkard-hadir-dot ${hadir?'hadir':'absen'}" title="P${j.nomor} — ${j.tanggal||'—'}\n${hadir?'✅ Hadir':'—  Absen'}">P${j.nomor}</div>`;
-    }).join('');
-  } else {
-    grid.innerHTML='';
-    empty.style.display='block';
-  }
+  // Filter tahun kehadiran
+  _admCardAnggota=a;
+  _admCardAbsen=absenAnggota;
+  _admCardJadwal=[...jadwalList].sort((x,y)=>x.nomor-y.nomor);
+
+  const tahunList=getJadwalPerTahun();
+  const sel=document.getElementById('da-tahun-filter');
+  sel.innerHTML='<option value="semua">Semua Tahun</option>'+tahunList.map(t=>`<option value="${t}">${t}</option>`).join('');
+  if(tahunList.length) sel.value=tahunList[0];
+
+  renderAdminHadir();
 
   // Riwayat petugas
   document.getElementById('da-petugas').innerHTML=peranList.length
@@ -1711,7 +1764,58 @@ function cekHashAnggota(){
   if(a)setTimeout(()=>bukaDetailAnggota(a.id),400);
 }
 
+// ═══ HELPER: iuran multi-tahun HTML ═══
+function buildIuranTahunHTML(anggota,iuranData){
+  const fmtRp=n=>'Rp '+n.toLocaleString('id-ID');
+  const tahunSekarang=new Date().getFullYear();
+  // Kumpulkan tahun yang ada di data iuran untuk anggota ini
+  const iuranAnggota=iuranData.filter(iu=>iu.anggota_id===anggota.id||iu.nama===anggota.nama);
+  // Buat set tahun: dari tahunAwal sampai tahun sekarang, ATAU tahun yang ada di data
+  const tahunSet=new Set();
+  for(let t=CFG.tahunAwal;t<=tahunSekarang;t++) tahunSet.add(t);
+  iuranAnggota.forEach(iu=>{ if(iu.tahun) tahunSet.add(Number(iu.tahun)); });
+  const tahunList=[...tahunSet].sort((a,b)=>b-a); // terbaru dulu
+
+  if(!tahunList.length) return '<div style="color:#CCC;font-size:12px">Belum ada data iuran</div>';
+
+  return tahunList.map(t=>{
+    const rec=iuranAnggota.find(iu=>Number(iu.tahun||0)===t);
+    const nom=rec?Number(rec.nominal||0):0;
+    const isLunas=nom>=IU_TARGET;
+    const isSebagian=nom>0&&nom<IU_TARGET;
+    const cls=isLunas?'lunas':isSebagian?'sebagian':'belum';
+    const icon=isLunas?'✅':isSebagian?'⚠️':'❌';
+    const sts=isLunas?'LUNAS':isSebagian?'SEBAGIAN':'BELUM';
+    const stsColor=isLunas?'var(--teal)':isSebagian?'#9A7800':'#AAA';
+    const stsBg=isLunas?'var(--teal-light)':isSebagian?'#FEF9EC':'#F0F2F5';
+    const nomTxt=isLunas?fmtRp(nom):isSebagian?fmtRp(nom)+' / '+fmtRp(IU_TARGET):'Belum bayar';
+    const isTahunIni=t===tahunSekarang;
+    return `<div class="iuran-tahun-row ${cls}" style="${isTahunIni?'border:1.5px solid var(--gold);':''}">
+      <div class="iuran-tahun-icon" style="background:${isLunas?'var(--teal-light)':isSebagian?'#FEF9EC':'#F0F2F5'}">${icon}</div>
+      <div class="iuran-tahun-lbl">${t}${isTahunIni?' <span style="font-size:8px;background:var(--gold);color:white;padding:1px 4px;border-radius:4px">★</span>':''}</div>
+      <div class="iuran-tahun-nom">${nomTxt}</div>
+      <div class="iuran-tahun-status" style="background:${stsBg};color:${stsColor}">${sts}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══ HELPER: kehadiran per tahun, filter jadwal berdasarkan tahun tanggal ═══
+function getJadwalPerTahun(){
+  // Ambil semua tahun yang ada di jadwal berdasarkan kolom tanggal
+  const tahunSet=new Set();
+  jadwalList.forEach(j=>{
+    if(j.tanggal){
+      const t=new Date(j.tanggal).getFullYear();
+      if(!isNaN(t)) tahunSet.add(t);
+    }
+  });
+  return [...tahunSet].sort((a,b)=>b-a);
+}
+
 // ═══ KARTU ANGGOTA PUBLIK ═══
+// Simpan state untuk filter tahun publik
+let _pubAnggota=null, _pubAbsen=[], _pubJadwal=[], _pubTahunList=[];
+
 async function tampilKartuPublik(nomor){
   // Sembunyikan semua halaman lain
   document.getElementById('loading-screen').style.display='none';
@@ -1721,16 +1825,18 @@ async function tampilKartuPublik(nomor){
 
   try{
     // Muat data yang dibutuhkan
-    const[r1,r2,r3,r4]=await Promise.all([
+    const[r1,r2,r3,r4,r5]=await Promise.all([
       db.from(CFG.tabelAnggota).select('*').order('urutan,nama'),
       db.from(CFG.tabelAbsen).select('*'),
       db.from(CFG.tabelJadwal).select('*').order('nomor'),
       db.from(CFG.tabelIuran).select('*').order('tahun'),
+      db.from(CFG.tabelFoto).select('*').eq('status','approved').catch(()=>({data:[]})),
     ]);
     allAnggota=r1.data||[];
     allAbsen=r2.data||[];
     jadwalList=(r3.data||[]).map(j=>({...j,galangan:j.galangan!=null?Number(j.galangan):null}));
     allIuran=(r4.data||[]).map(r=>({...r,nominal:Number(r.nominal||0)}));
+    const fotoApproved=r5.data||[];
 
     // Cari anggota berdasarkan nomor urutan
     const a=allAnggota.find(x=>Number(x.urutan||0)===nomor)||allAnggota[nomor-1];
@@ -1741,16 +1847,38 @@ async function tampilKartuPublik(nomor){
       return;
     }
 
+    // Simpan state untuk filter
+    _pubAnggota=a;
+    _pubAbsen=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama);
+    _pubJadwal=[...jadwalList].sort((x,y)=>x.nomor-y.nomor);
+
+    // Foto profil (approved)
+    const fotoRec=fotoApproved.find(f=>f.anggota_id===a.id||f.nama===a.nama);
+    const avatarEl=document.getElementById('pub-avatar');
+    if(fotoRec&&fotoRec.foto_url){
+      avatarEl.innerHTML=`<img src="${fotoRec.foto_url}" alt="${a.nama}"/>`;
+    } else {
+      avatarEl.textContent=a.nama[0].toUpperCase();
+    }
+
+    // Cek apakah ada foto pending untuk anggota ini
+    const rPending=await db.from(CFG.tabelFoto).select('*').eq('status','pending')
+      .or(`anggota_id.eq.${a.id},nama.eq.${a.nama}`).catch(()=>({data:[]}));
+    const hasPending=(rPending.data||[]).length>0;
+    document.getElementById('pub-foto-zone').style.display=hasPending?'none':'block';
+    document.getElementById('pub-foto-pending').style.display=hasPending?'block':'none';
+    // Simpan id anggota untuk upload
+    document.getElementById('pub-foto-input').dataset.anggotaId=a.id;
+    document.getElementById('pub-foto-input').dataset.anggotaNama=a.nama;
+
     // Isi kartu
     const nomorTampil=a.urutan||nomor;
-    document.getElementById('pub-avatar').textContent=a.nama[0].toUpperCase();
     document.getElementById('pub-nama').textContent=a.nama;
     document.getElementById('pub-sub').textContent=(a.no_hp||'Tanpa HP')+' · '+(a.alamat||'Tanpa Alamat');
     document.getElementById('pub-no-badge').textContent='#'+nomorTampil;
     document.getElementById('pub-url-hash').textContent='sumbayak.vercel.app#'+nomorTampil;
 
-    // Statistik kehadiran
-    const absenAnggota=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama);
+    // Statistik kehadiran (semua tahun)
     const peranList=[
       ...jadwalList.filter(j=>j.parambilan&&j.parambilan.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Parambilan',clr:'chip-green'})),
       ...jadwalList.filter(j=>j.siboan_doding&&j.siboan_doding.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Siboan Doding',clr:'chip-gold'})),
@@ -1758,46 +1886,23 @@ async function tampilKartuPublik(nomor){
     ].sort((x,y)=>x.nomor-y.nomor);
     const jTR=jadwalList.filter(j=>j.tuan_rumah&&j.tuan_rumah.toLowerCase()===a.nama.toLowerCase());
 
-    document.getElementById('pub-s-hadir').textContent=absenAnggota.length;
+    document.getElementById('pub-s-hadir').textContent=_pubAbsen.length;
     document.getElementById('pub-s-total').textContent=jadwalList.length;
     document.getElementById('pub-s-petugas').textContent=peranList.length;
     document.getElementById('pub-s-tuan').textContent=jTR.length;
 
-    // Iuran 2026
-    const recIuran=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&Number(iu.tahun||0)===2026);
-    const nomIuran=recIuran?Number(recIuran.nominal||0):0;
-    const fmtRp=n=>'Rp '+n.toLocaleString('id-ID');
-    const iuranIcon=document.getElementById('pub-iuran-icon');
-    const iuranNom=document.getElementById('pub-iuran-nominal');
-    const iuranSts=document.getElementById('pub-iuran-status');
-    if(nomIuran>=IU_TARGET){
-      iuranIcon.style.background='var(--teal-light)';iuranIcon.textContent='✅';
-      iuranNom.textContent=fmtRp(nomIuran);
-      iuranSts.textContent='LUNAS';iuranSts.style.background='var(--teal-light)';iuranSts.style.color='var(--teal)';
-    }else if(nomIuran>0){
-      iuranIcon.style.background='#FEF9EC';iuranIcon.textContent='⚠️';
-      iuranNom.textContent=fmtRp(nomIuran)+' / '+fmtRp(IU_TARGET);
-      iuranSts.textContent='SEBAGIAN';iuranSts.style.background='#FEF9EC';iuranSts.style.color='#9A7800';
-    }else{
-      iuranIcon.style.background='var(--red-light)';iuranIcon.textContent='❌';
-      iuranNom.textContent='Belum bayar';
-      iuranSts.textContent='BELUM';iuranSts.style.background='var(--red-light)';iuranSts.style.color='var(--red)';
-    }
+    // Iuran multi-tahun
+    document.getElementById('pub-iuran-grid').innerHTML=buildIuranTahunHTML(a,allIuran);
 
-    // Dot kehadiran per partonggoan
-    const sortedJadwal=[...jadwalList].sort((x,y)=>x.nomor-y.nomor);
-    const grid=document.getElementById('pub-hadir-grid');
-    const empty=document.getElementById('pub-hadir-empty');
-    if(sortedJadwal.length){
-      empty.style.display='none';
-      const hadirTanggal=new Set(absenAnggota.map(ab=>ab.tanggal_acara));
-      grid.innerHTML=sortedJadwal.map(j=>{
-        const hadir=hadirTanggal.has(j.tanggal);
-        return `<div class="mkard-hadir-dot ${hadir?'hadir':'absen'}" title="P${j.nomor} — ${j.tanggal||'—'}\n${hadir?'✅ Hadir':'— Absen'}">P${j.nomor}</div>`;
-      }).join('');
-    }else{
-      grid.innerHTML='';empty.style.display='block';
-    }
+    // Filter tahun kehadiran — isi dropdown
+    _pubTahunList=getJadwalPerTahun();
+    const sel=document.getElementById('pub-tahun-filter');
+    sel.innerHTML='<option value="semua">Semua Tahun</option>'+_pubTahunList.map(t=>`<option value="${t}">${t}</option>`).join('');
+    // Default: tahun terbaru yang ada data
+    if(_pubTahunList.length) sel.value=_pubTahunList[0];
+
+    // Render kehadiran
+    renderPublikHadir();
 
     // Petugas
     document.getElementById('pub-petugas').innerHTML=peranList.length
@@ -1820,6 +1925,172 @@ async function tampilKartuPublik(nomor){
     document.getElementById('publik-error').style.display='block';
     document.getElementById('publik-error-msg').textContent='Gagal memuat data: '+e.message;
   }
+}
+
+// ═══ RENDER KEHADIRAN PUBLIK (dengan filter tahun) ═══
+function renderPublikHadir(){
+  if(!_pubAnggota||!_pubJadwal) return;
+  const sel=document.getElementById('pub-tahun-filter');
+  const tahunPilih=sel?sel.value:'semua';
+  const jadwalFilter=tahunPilih==='semua'?_pubJadwal:_pubJadwal.filter(j=>{
+    if(!j.tanggal)return false;
+    return new Date(j.tanggal).getFullYear()===parseInt(tahunPilih);
+  });
+  const grid=document.getElementById('pub-hadir-grid');
+  const empty=document.getElementById('pub-hadir-empty');
+  const hadirTanggal=new Set(_pubAbsen.map(ab=>ab.tanggal_acara));
+  if(jadwalFilter.length){
+    empty.style.display='none';
+    grid.innerHTML=jadwalFilter.map(j=>{
+      const hadir=hadirTanggal.has(j.tanggal);
+      return `<div class="mkard-hadir-dot ${hadir?'hadir':'absen'}" title="P${j.nomor} — ${j.tanggal||'—'}\n${hadir?'✅ Hadir':'— Absen'}">P${j.nomor}</div>`;
+    }).join('');
+  }else{
+    grid.innerHTML='';
+    empty.style.display='block';
+    empty.textContent='Tidak ada data untuk tahun ini';
+  }
+}
+function filterPublikTahun(){ renderPublikHadir(); }
+
+// ═══ RENDER KEHADIRAN ADMIN CARD (dengan filter tahun) ═══
+let _admCardAnggota=null,_admCardAbsen=[],_admCardJadwal=[];
+function renderAdminHadir(){
+  if(!_admCardAnggota) return;
+  const sel=document.getElementById('da-tahun-filter');
+  const tahunPilih=sel?sel.value:'semua';
+  const jadwalFilter=tahunPilih==='semua'?_admCardJadwal:_admCardJadwal.filter(j=>{
+    if(!j.tanggal)return false;
+    return new Date(j.tanggal).getFullYear()===parseInt(tahunPilih);
+  });
+  const grid=document.getElementById('da-hadir-grid');
+  const empty=document.getElementById('da-hadir-empty');
+  const hadirTanggal=new Set(_admCardAbsen.map(ab=>ab.tanggal_acara));
+  if(jadwalFilter.length){
+    empty.style.display='none';
+    grid.innerHTML=jadwalFilter.map(j=>{
+      const hadir=hadirTanggal.has(j.tanggal);
+      return `<div class="mkard-hadir-dot ${hadir?'hadir':'absen'}" title="P${j.nomor} — ${j.tanggal||'—'}\n${hadir?'✅ Hadir':'— Absen'}">P${j.nomor}</div>`;
+    }).join('');
+  }else{
+    grid.innerHTML='';
+    empty.style.display='block';
+    empty.textContent='Tidak ada data untuk tahun ini';
+  }
+}
+function filterAdminTahun(){ renderAdminHadir(); }
+
+// ═══ UPLOAD FOTO ANGGOTA ═══
+async function uploadFotoAnggota(input){
+  const file=input.files[0];
+  if(!file)return;
+  if(file.size>3*1024*1024){showToast('❌ Ukuran foto max 3MB');return;}
+  showToast('⏳ Mengupload foto...');
+
+  // Konversi ke base64 dan simpan ke tabel foto_anggota sebagai data URL
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const base64=e.target.result; // data:image/...;base64,...
+    const anggotaId=input.dataset.anggotaId;
+    const anggotaNama=input.dataset.anggotaNama;
+    const waktuUpload=new Date().toISOString();
+
+    // Hapus pending lama jika ada, lalu insert baru
+    await db.from(CFG.tabelFoto).delete().eq('anggota_id',anggotaId).eq('status','pending').catch(()=>{});
+    const {error}=await db.from(CFG.tabelFoto).insert({
+      anggota_id:anggotaId,
+      nama:anggotaNama,
+      foto_url:base64,
+      status:'pending',
+      uploaded_at:waktuUpload,
+    });
+    if(error){
+      // Fallback: simpan di localStorage sementara jika tabel belum ada
+      const pending=JSON.parse(localStorage.getItem('foto_pending')||'[]');
+      pending.push({anggota_id:anggotaId,nama:anggotaNama,foto_url:base64,status:'pending',uploaded_at:waktuUpload});
+      localStorage.setItem('foto_pending',JSON.stringify(pending));
+    }
+    showToast('✅ Foto terkirim! Menunggu persetujuan admin.');
+    document.getElementById('pub-foto-zone').style.display='none';
+    document.getElementById('pub-foto-pending').style.display='block';
+    input.value='';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══ FOTO APPROVAL — ADMIN SEKRETARIS ═══
+async function muat_foto_pending(){
+  let pendingList=[];
+  // Coba dari Supabase
+  const {data}=await db.from(CFG.tabelFoto).select('*').eq('status','pending').order('uploaded_at').catch(()=>({data:null}));
+  if(data) pendingList=data;
+  else {
+    // Fallback localStorage
+    pendingList=JSON.parse(localStorage.getItem('foto_pending')||'[]').filter(f=>f.status==='pending');
+  }
+
+  const sec=document.getElementById('foto-approval-section');
+  const list=document.getElementById('foto-approval-list');
+  const badge=document.getElementById('foto-approval-count');
+
+  if(!pendingList.length){
+    sec.style.display='none';
+    return;
+  }
+  sec.style.display='block';
+  badge.textContent=pendingList.length;
+
+  list.innerHTML=pendingList.map(f=>`
+    <div class="foto-approval-card" id="fappr-${f.anggota_id||f.nama}">
+      <img class="foto-approval-img" src="${f.foto_url}" alt="${f.nama}" onerror="this.style.display='none'"/>
+      <div class="foto-approval-info">
+        <div class="foto-approval-name">${f.nama}</div>
+        <div class="foto-approval-time">Upload: ${f.uploaded_at?new Date(f.uploaded_at).toLocaleString('id-ID'):'—'}</div>
+      </div>
+      <div class="foto-approval-actions">
+        <button class="btn-sm btn-sm-green" onclick="approveFoto('${f.anggota_id}','${f.nama}')">✅ Setujui</button>
+        <button class="btn-sm btn-sm-red" onclick="tolakFoto('${f.anggota_id}','${f.nama}')">❌ Tolak</button>
+      </div>
+    </div>`).join('');
+}
+
+async function approveFoto(anggotaId,nama){
+  // Update status jadi approved di Supabase
+  const {error}=await db.from(CFG.tabelFoto).update({status:'approved'})
+    .eq('anggota_id',anggotaId).eq('status','pending');
+  if(error){
+    // Fallback localStorage
+    const pending=JSON.parse(localStorage.getItem('foto_pending')||'[]');
+    const approved=JSON.parse(localStorage.getItem('foto_approved')||'[]');
+    const idx=pending.findIndex(f=>f.anggota_id===anggotaId||f.nama===nama);
+    if(idx>=0){
+      const rec=pending.splice(idx,1)[0];
+      rec.status='approved';
+      approved.push(rec);
+      localStorage.setItem('foto_pending',JSON.stringify(pending));
+      localStorage.setItem('foto_approved',JSON.stringify(approved));
+    }
+  }
+  showToast('✅ Foto '+nama+' disetujui!');
+  // Update avatar di tabel anggota lokal
+  const aIdx=allAnggota.findIndex(a=>a.id===anggotaId||a.nama===nama);
+  if(aIdx>=0){
+    const fotoData=await db.from(CFG.tabelFoto).select('foto_url').eq('anggota_id',anggotaId).eq('status','approved').single().catch(()=>({data:null}));
+    if(fotoData.data) allAnggota[aIdx]._foto_url=fotoData.data.foto_url;
+  }
+  document.getElementById(`fappr-${anggotaId||nama}`)?.remove();
+  await muat_foto_pending();
+}
+
+async function tolakFoto(anggotaId,nama){
+  await db.from(CFG.tabelFoto).delete().eq('anggota_id',anggotaId).eq('status','pending').catch(()=>{});
+  // Fallback localStorage
+  const pending=JSON.parse(localStorage.getItem('foto_pending')||'[]');
+  const idx=pending.findIndex(f=>f.anggota_id===anggotaId||f.nama===nama);
+  if(idx>=0){ pending.splice(idx,1); localStorage.setItem('foto_pending',JSON.stringify(pending)); }
+  showToast('🗑️ Foto '+nama+' ditolak.');
+  document.getElementById(`fappr-${anggotaId||nama}`)?.remove();
+  await muat_foto_pending();
 }
 
 function printKartuPublik(){
