@@ -1707,7 +1707,7 @@ function cekHashAnggota(){
   const h=window.location.hash.replace('#','');
   if(!h||isNaN(h))return;
   const no=parseInt(h);
-  const a=allAnggota.find(x=>(x.urutan||0)===no)||allAnggota[no-1];
+  const a=allAnggota.find(x=>Number(x.urutan||0)===no)||allAnggota[no-1];
   if(a)setTimeout(()=>bukaDetailAnggota(a.id),400);
 }
 
@@ -1733,7 +1733,7 @@ async function tampilKartuPublik(nomor){
     allIuran=(r4.data||[]).map(r=>({...r,nominal:Number(r.nominal||0)}));
 
     // Cari anggota berdasarkan nomor urutan
-    const a=allAnggota.find(x=>(x.urutan||0)===nomor)||allAnggota[nomor-1];
+    const a=allAnggota.find(x=>Number(x.urutan||0)===nomor)||allAnggota[nomor-1];
     if(!a){
       document.getElementById('publik-loading').style.display='none';
       document.getElementById('publik-error').style.display='block';
