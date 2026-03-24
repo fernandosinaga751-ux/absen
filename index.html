@@ -200,6 +200,14 @@ table.data-tbl td.center{text-align:center;}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--dark);color:white;padding:12px 24px;border-radius:12px;font-size:13px;font-weight:700;z-index:99999;transition:transform .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.25);white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 
+/* ── HALAMAN KARTU PUBLIK ── */
+#page-kartu-publik{display:none;min-height:100vh;background:linear-gradient(160deg,var(--dark) 0%,#4A2E18 100%);align-items:center;justify-content:center;padding:20px;flex-direction:column;gap:14px;}
+#page-kartu-publik.show{display:flex;}
+.publik-card-wrap{width:100%;max-width:500px;}
+.publik-actions{display:flex;gap:10px;width:100%;max-width:500px;flex-wrap:wrap;}
+.publik-actions button{flex:1;min-width:100px;}
+.publik-branding{font-size:11px;color:rgba(255,255,255,.3);text-align:center;letter-spacing:1px;margin-top:4px;}
+
 /* ── MISC ── */
 .badge-no{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;background:var(--gold-light);color:#7A5C1E;border-radius:6px;font-size:11px;font-weight:700;}
 .search-input{padding:8px 14px;border:1.5px solid #E8E0D5;border-radius:9px;font-size:13px;font-family:'Lato',sans-serif;color:var(--dark);background:white;outline:none;}
@@ -896,6 +904,77 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
   </div><!-- /admin-main -->
 </div><!-- /page-admin -->
 
+<!-- ═══ HALAMAN KARTU ANGGOTA PUBLIK (akses via #nomor) ═══ -->
+<div id="page-kartu-publik">
+  <div class="publik-card-wrap">
+    <!-- Loading state -->
+    <div id="publik-loading" style="text-align:center;padding:40px;color:rgba(255,255,255,.6)">
+      <div class="spinner" style="margin:0 auto 14px"></div>
+      <div style="font-size:13px;letter-spacing:2px">Memuat kartu anggota...</div>
+    </div>
+    <!-- Card (disembunyikan saat loading) -->
+    <div id="publik-kartu-wrap" style="display:none;background:white;border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.4)">
+      <!-- Header -->
+      <div class="mkard-header">
+        <div class="mkard-header-top">
+          <div class="mkard-avatar-lg" id="pub-avatar">?</div>
+          <div class="mkard-title">
+            <h2 id="pub-nama">—</h2>
+            <p id="pub-sub">—</p>
+            <div class="mkard-url" id="pub-url-hash"></div>
+          </div>
+        </div>
+        <div class="mkard-no-badge" id="pub-no-badge">#—</div>
+      </div>
+      <!-- Stats -->
+      <div class="mkard-stats">
+        <div class="mkard-stat"><div class="mkard-stat-val" id="pub-s-hadir" style="color:var(--green)">0</div><div class="mkard-stat-lbl">Kali Hadir</div></div>
+        <div class="mkard-stat"><div class="mkard-stat-val" id="pub-s-total">0</div><div class="mkard-stat-lbl">Total Partonggoan</div></div>
+        <div class="mkard-stat"><div class="mkard-stat-val" id="pub-s-petugas" style="color:var(--blue)">0</div><div class="mkard-stat-lbl">Jadi Petugas</div></div>
+        <div class="mkard-stat"><div class="mkard-stat-val" id="pub-s-tuan" style="color:var(--gold)">0</div><div class="mkard-stat-lbl">Tuan Rumah</div></div>
+      </div>
+      <!-- Iuran -->
+      <div class="mkard-iuran" id="pub-iuran-row">
+        <div class="mkard-iuran-icon" id="pub-iuran-icon" style="background:var(--green-light)">💳</div>
+        <div class="mkard-iuran-info">
+          <div class="mkard-iuran-label">Iuran 2026</div>
+          <div class="mkard-iuran-val" id="pub-iuran-nominal">—</div>
+        </div>
+        <div class="mkard-iuran-status" id="pub-iuran-status">—</div>
+      </div>
+      <!-- Kehadiran -->
+      <div class="mkard-section">
+        <div class="mkard-section-title">✅ Kehadiran per Partonggoan</div>
+        <div class="mkard-hadir-grid" id="pub-hadir-grid"></div>
+        <div id="pub-hadir-empty" style="display:none;color:#CCC;font-size:13px;padding:4px 0">Belum ada data kehadiran</div>
+      </div>
+      <!-- Petugas -->
+      <div class="mkard-section">
+        <div class="mkard-section-title">🎤 Riwayat Jadi Petugas</div>
+        <div id="pub-petugas"></div>
+      </div>
+      <!-- Tuan Rumah -->
+      <div class="mkard-section">
+        <div class="mkard-section-title">🏠 Tuan Rumah Partonggoan</div>
+        <div id="pub-tuan-rumah"></div>
+      </div>
+    </div>
+    <!-- Error state -->
+    <div id="publik-error" style="display:none;text-align:center;padding:40px;background:white;border-radius:20px">
+      <div style="font-size:48px;margin-bottom:14px">😕</div>
+      <div style="font-size:18px;font-weight:700;color:var(--dark);margin-bottom:8px">Anggota tidak ditemukan</div>
+      <div style="font-size:13px;color:#999" id="publik-error-msg">Nomor anggota tidak valid</div>
+    </div>
+  </div>
+  <!-- Tombol aksi -->
+  <div class="publik-actions" id="publik-actions" style="display:none">
+    <button class="btn-primary" onclick="printKartuPublik()" style="flex:1">🖨️ Print</button>
+    <button class="btn-gold" onclick="savePhotoPublik()" style="flex:1">📸 Simpan Foto</button>
+    <button class="btn-outline" onclick="window.location.hash='';window.location.href=window.location.pathname" style="background:rgba(255,255,255,.9);flex:1">🔑 Login Admin</button>
+  </div>
+  <div class="publik-branding">Partonggoan TSBP Medan Timur</div>
+</div>
+
 <!-- ═══ HALAMAN INPUT TOKEN (bendahara input publik) ═══ -->
 <div id="page-input-token" style="display:none">
   <div style="max-width:480px;width:100%;margin:0 auto">
@@ -1179,6 +1258,13 @@ let timerInterval=null, timerSisa=600;
 
 // ═══ INIT ═══
 async function init(){
+  // ── Cek hash publik (#nomor) — tampilkan kartu tanpa login ──
+  const hashVal=window.location.hash.replace('#','');
+  if(hashVal&&!isNaN(hashVal)&&parseInt(hashVal)>0){
+    await tampilKartuPublik(parseInt(hashVal));
+    return;
+  }
+
   // Safety: force hide loading after 15 detik
   const safetyTimer=setTimeout(()=>{
     const ls=document.getElementById('loading-screen');
@@ -1623,6 +1709,146 @@ function cekHashAnggota(){
   const no=parseInt(h);
   const a=allAnggota.find(x=>(x.urutan||0)===no)||allAnggota[no-1];
   if(a)setTimeout(()=>bukaDetailAnggota(a.id),400);
+}
+
+// ═══ KARTU ANGGOTA PUBLIK ═══
+async function tampilKartuPublik(nomor){
+  // Sembunyikan semua halaman lain
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('page-login').style.display='none';
+  const pg=document.getElementById('page-kartu-publik');
+  pg.classList.add('show');
+
+  try{
+    // Muat data yang dibutuhkan
+    const[r1,r2,r3,r4]=await Promise.all([
+      db.from(CFG.tabelAnggota).select('*').order('urutan,nama'),
+      db.from(CFG.tabelAbsen).select('*'),
+      db.from(CFG.tabelJadwal).select('*').order('nomor'),
+      db.from(CFG.tabelIuran).select('*').order('tahun'),
+    ]);
+    allAnggota=r1.data||[];
+    allAbsen=r2.data||[];
+    jadwalList=(r3.data||[]).map(j=>({...j,galangan:j.galangan!=null?Number(j.galangan):null}));
+    allIuran=(r4.data||[]).map(r=>({...r,nominal:Number(r.nominal||0)}));
+
+    // Cari anggota berdasarkan nomor urutan
+    const a=allAnggota.find(x=>(x.urutan||0)===nomor)||allAnggota[nomor-1];
+    if(!a){
+      document.getElementById('publik-loading').style.display='none';
+      document.getElementById('publik-error').style.display='block';
+      document.getElementById('publik-error-msg').textContent=`Nomor anggota #${nomor} tidak ditemukan`;
+      return;
+    }
+
+    // Isi kartu
+    const nomorTampil=a.urutan||nomor;
+    document.getElementById('pub-avatar').textContent=a.nama[0].toUpperCase();
+    document.getElementById('pub-nama').textContent=a.nama;
+    document.getElementById('pub-sub').textContent=(a.no_hp||'Tanpa HP')+' · '+(a.alamat||'Tanpa Alamat');
+    document.getElementById('pub-no-badge').textContent='#'+nomorTampil;
+    document.getElementById('pub-url-hash').textContent='sumbayak.vercel.app#'+nomorTampil;
+
+    // Statistik kehadiran
+    const absenAnggota=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama);
+    const peranList=[
+      ...jadwalList.filter(j=>j.parambilan&&j.parambilan.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Parambilan',clr:'chip-green'})),
+      ...jadwalList.filter(j=>j.siboan_doding&&j.siboan_doding.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Siboan Doding',clr:'chip-gold'})),
+      ...jadwalList.filter(j=>j.tonggo_syafaat&&j.tonggo_syafaat.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Tonggo Syafaat',clr:'chip-red'})),
+    ].sort((x,y)=>x.nomor-y.nomor);
+    const jTR=jadwalList.filter(j=>j.tuan_rumah&&j.tuan_rumah.toLowerCase()===a.nama.toLowerCase());
+
+    document.getElementById('pub-s-hadir').textContent=absenAnggota.length;
+    document.getElementById('pub-s-total').textContent=jadwalList.length;
+    document.getElementById('pub-s-petugas').textContent=peranList.length;
+    document.getElementById('pub-s-tuan').textContent=jTR.length;
+
+    // Iuran 2026
+    const recIuran=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&Number(iu.tahun||0)===2026);
+    const nomIuran=recIuran?Number(recIuran.nominal||0):0;
+    const fmtRp=n=>'Rp '+n.toLocaleString('id-ID');
+    const iuranIcon=document.getElementById('pub-iuran-icon');
+    const iuranNom=document.getElementById('pub-iuran-nominal');
+    const iuranSts=document.getElementById('pub-iuran-status');
+    if(nomIuran>=IU_TARGET){
+      iuranIcon.style.background='var(--teal-light)';iuranIcon.textContent='✅';
+      iuranNom.textContent=fmtRp(nomIuran);
+      iuranSts.textContent='LUNAS';iuranSts.style.background='var(--teal-light)';iuranSts.style.color='var(--teal)';
+    }else if(nomIuran>0){
+      iuranIcon.style.background='#FEF9EC';iuranIcon.textContent='⚠️';
+      iuranNom.textContent=fmtRp(nomIuran)+' / '+fmtRp(IU_TARGET);
+      iuranSts.textContent='SEBAGIAN';iuranSts.style.background='#FEF9EC';iuranSts.style.color='#9A7800';
+    }else{
+      iuranIcon.style.background='var(--red-light)';iuranIcon.textContent='❌';
+      iuranNom.textContent='Belum bayar';
+      iuranSts.textContent='BELUM';iuranSts.style.background='var(--red-light)';iuranSts.style.color='var(--red)';
+    }
+
+    // Dot kehadiran per partonggoan
+    const sortedJadwal=[...jadwalList].sort((x,y)=>x.nomor-y.nomor);
+    const grid=document.getElementById('pub-hadir-grid');
+    const empty=document.getElementById('pub-hadir-empty');
+    if(sortedJadwal.length){
+      empty.style.display='none';
+      const hadirTanggal=new Set(absenAnggota.map(ab=>ab.tanggal_acara));
+      grid.innerHTML=sortedJadwal.map(j=>{
+        const hadir=hadirTanggal.has(j.tanggal);
+        return `<div class="mkard-hadir-dot ${hadir?'hadir':'absen'}" title="P${j.nomor} — ${j.tanggal||'—'}\n${hadir?'✅ Hadir':'— Absen'}">P${j.nomor}</div>`;
+      }).join('');
+    }else{
+      grid.innerHTML='';empty.style.display='block';
+    }
+
+    // Petugas
+    document.getElementById('pub-petugas').innerHTML=peranList.length
+      ?peranList.map(p=>`<div class="mkard-petugas-item"><span class="chip ${p.clr}" style="font-size:10px;white-space:nowrap">${p.peran}</span><div style="flex:1"><span style="font-size:12px;font-weight:700">Partonggoan ${p.nomor}</span> <span style="font-size:11px;color:#AAA">${p.tanggal||'—'}</span></div></div>`).join('')
+      :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah jadi petugas</div>';
+
+    // Tuan Rumah
+    document.getElementById('pub-tuan-rumah').innerHTML=jTR.length
+      ?jTR.map(j=>`<div class="mkard-petugas-item"><span class="chip chip-gold" style="font-size:10px;white-space:nowrap">P${j.nomor}</span><div style="flex:1"><span style="font-size:12px;font-weight:700">${j.tanggal||'—'}</span><span style="font-size:11px;color:#AAA;display:block">${j.tempat||'—'}</span></div></div>`).join('')
+      :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah menjadi tuan rumah</div>';
+
+    // Tampilkan kartu dan tombol
+    document.getElementById('publik-loading').style.display='none';
+    document.getElementById('publik-kartu-wrap').style.display='block';
+    document.getElementById('publik-actions').style.display='flex';
+    window._publickAnggotaNama=a.nama;
+
+  }catch(e){
+    document.getElementById('publik-loading').style.display='none';
+    document.getElementById('publik-error').style.display='block';
+    document.getElementById('publik-error-msg').textContent='Gagal memuat data: '+e.message;
+  }
+}
+
+function printKartuPublik(){
+  const kartu=document.getElementById('publik-kartu-wrap');
+  const W=window.open('','_blank','width=520,height=700');
+  W.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;padding:0;background:white;font-family:'Lato',sans-serif;}
+*{box-sizing:border-box;}
+${Array.from(document.styleSheets).map(s=>{try{return Array.from(s.cssRules).map(r=>r.cssText).join('\n');}catch(e){return '';}}).join('\n')}
+</style></head><body>${kartu.outerHTML}
+<script>window.onload=function(){window.print();window.close();}<\/script></body></html>`);
+  W.document.close();
+}
+
+async function savePhotoPublik(){
+  if(typeof html2canvas==='undefined'){showToast('❌ Library photo belum siap');return;}
+  const kartu=document.getElementById('publik-kartu-wrap');
+  try{
+    showToast('📸 Menyimpan foto...');
+    const canvas=await html2canvas(kartu,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false});
+    const link=document.createElement('a');
+    const nama=(window._publickAnggotaNama||'anggota').replace(/\s+/g,'_');
+    link.download=`Kartu_Anggota_${nama}.png`;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    showToast('✅ Foto berhasil disimpan!');
+  }catch(e){showToast('❌ Gagal menyimpan: '+e.message);}
 }
 
 // Print kartu anggota
