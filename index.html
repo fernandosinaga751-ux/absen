@@ -11,6 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -264,6 +265,43 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
 .keu-nom{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;}
 .keu-nom.masuk{color:var(--green);}
 .keu-nom.keluar{color:var(--red);}
+
+/* ── KARTU ANGGOTA (pop-up baru) ── */
+.member-card-modal .modal-card{max-width:500px;padding:0;overflow:hidden;border-radius:20px;}
+#member-kartu{background:white;font-family:'Lato',sans-serif;}
+.mkard-header{background:linear-gradient(135deg,var(--dark) 0%,#6B3F2A 100%);padding:22px 24px 18px;position:relative;}
+.mkard-header-top{display:flex;align-items:center;gap:14px;}
+.mkard-avatar-lg{width:62px;height:62px;border-radius:16px;background:linear-gradient(135deg,var(--gold),#A0782A);display:flex;align-items:center;justify-content:center;color:white;font-family:'Playfair Display',serif;font-size:26px;font-weight:700;flex-shrink:0;border:2px solid rgba(255,255,255,.25);}
+.mkard-title{color:white;}
+.mkard-title h2{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:2px;}
+.mkard-title p{font-size:11px;color:rgba(255,255,255,.55);margin:0;}
+.mkard-no-badge{position:absolute;top:16px;right:18px;background:var(--gold);color:white;border-radius:10px;padding:4px 12px;font-size:11px;font-weight:700;letter-spacing:.5px;}
+.mkard-url{font-size:10px;color:rgba(255,255,255,.35);margin-top:6px;letter-spacing:.5px;}
+
+.mkard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #F0F2F5;}
+.mkard-stat{padding:14px 10px;text-align:center;border-right:1px solid #F0F2F5;}
+.mkard-stat:last-child{border-right:none;}
+.mkard-stat-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--dark);line-height:1;}
+.mkard-stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#AAA;margin-top:4px;}
+
+.mkard-iuran{padding:14px 20px;border-bottom:1px solid #F0F2F5;display:flex;align-items:center;gap:12px;}
+.mkard-iuran-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.mkard-iuran-info{flex:1;}
+.mkard-iuran-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#AAA;margin-bottom:2px;}
+.mkard-iuran-val{font-size:14px;font-weight:700;color:var(--dark);}
+.mkard-iuran-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;white-space:nowrap;}
+
+.mkard-section{padding:14px 20px;border-bottom:1px solid #F0F2F5;}
+.mkard-section:last-of-type{border-bottom:none;}
+.mkard-section-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--brown);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.mkard-hadir-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.mkard-hadir-dot{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:default;}
+.mkard-hadir-dot.hadir{background:var(--green);color:white;}
+.mkard-hadir-dot.absen{background:#F0F2F5;color:#CCC;}
+.mkard-petugas-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F8F9FC;}
+.mkard-petugas-item:last-child{border-bottom:none;}
+
+.mkard-footer{padding:14px 20px;display:flex;gap:8px;background:#F8F9FC;border-top:1px solid #F0F2F5;}
 </style>
 </head>
 <body>
@@ -392,7 +430,7 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
           </div>
           <div class="tbl-wrap">
             <table class="data-tbl">
-              <thead><tr><th>No</th><th>Nama Anggota</th><th>Alamat</th><th>No. HP</th><th>Total Hadir</th><th>Aksi</th></tr></thead>
+              <thead><tr><th>No</th><th>Nama Anggota</th><th>Alamat</th><th>No. HP</th><th>Total Hadir</th><th>Iuran 2026</th><th>Aksi</th></tr></thead>
               <tbody id="member-tbody"></tbody>
             </table>
           </div>
@@ -968,34 +1006,79 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
   </div>
 </div>
 
-<!-- Modal Detail Anggota -->
-<div class="modal-bg" id="m-detail-anggota">
+<!-- Modal Detail Anggota — Kartu History -->
+<div class="modal-bg member-card-modal" id="m-detail-anggota">
   <div class="modal-card">
-    <div class="detail-header">
-      <div class="detail-avatar" id="da-avatar">?</div>
-      <div>
-        <div style="font-family:'Playfair Display',serif;font-size:18px;color:var(--dark)" id="da-nama">—</div>
-        <div style="font-size:12px;color:#999;margin-top:2px" id="da-sub">—</div>
+    <!-- Kartu yang bisa di-capture -->
+    <div id="member-kartu">
+      <!-- Header -->
+      <div class="mkard-header">
+        <div class="mkard-header-top">
+          <div class="mkard-avatar-lg" id="da-avatar">?</div>
+          <div class="mkard-title">
+            <h2 id="da-nama">—</h2>
+            <p id="da-sub">—</p>
+            <div class="mkard-url" id="da-url-hash"></div>
+          </div>
+        </div>
+        <div class="mkard-no-badge" id="da-no-badge">#—</div>
       </div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-title">📍 Info Kontak</div>
-      <div id="da-info"></div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-title">🏠 Jadwal Menerima Partonggoan</div>
-      <div id="da-tuan-rumah"></div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-title">🎤 Riwayat Jadi Petugas</div>
-      <div id="da-petugas"></div>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-title">✅ Riwayat Kehadiran</div>
-      <div id="da-kehadiran"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-outline" onclick="closeModal('m-detail-anggota')">Tutup</button>
+
+      <!-- Stats Row: Total Hadir | Total Jadwal | Jadi Petugas | Tuan Rumah -->
+      <div class="mkard-stats">
+        <div class="mkard-stat">
+          <div class="mkard-stat-val" id="da-s-hadir" style="color:var(--green)">0</div>
+          <div class="mkard-stat-lbl">Kali Hadir</div>
+        </div>
+        <div class="mkard-stat">
+          <div class="mkard-stat-val" id="da-s-total">0</div>
+          <div class="mkard-stat-lbl">Total Partonggoan</div>
+        </div>
+        <div class="mkard-stat">
+          <div class="mkard-stat-val" id="da-s-petugas" style="color:var(--blue)">0</div>
+          <div class="mkard-stat-lbl">Jadi Petugas</div>
+        </div>
+        <div class="mkard-stat">
+          <div class="mkard-stat-val" id="da-s-tuan" style="color:var(--gold)">0</div>
+          <div class="mkard-stat-lbl">Tuan Rumah</div>
+        </div>
+      </div>
+
+      <!-- Iuran 2026 (konek dari bendahara) -->
+      <div class="mkard-iuran" id="da-iuran-row">
+        <div class="mkard-iuran-icon" id="da-iuran-icon" style="background:var(--green-light)">💳</div>
+        <div class="mkard-iuran-info">
+          <div class="mkard-iuran-label">Iuran 2026</div>
+          <div class="mkard-iuran-val" id="da-iuran-nominal">—</div>
+        </div>
+        <div class="mkard-iuran-status" id="da-iuran-status">—</div>
+      </div>
+
+      <!-- Riwayat Kehadiran per Partonggoan (dot grid) -->
+      <div class="mkard-section">
+        <div class="mkard-section-title">✅ Kehadiran per Partonggoan</div>
+        <div class="mkard-hadir-grid" id="da-hadir-grid"></div>
+        <div id="da-hadir-empty" style="display:none;color:#CCC;font-size:13px;padding:4px 0">Belum ada data kehadiran</div>
+      </div>
+
+      <!-- Riwayat Bertugas -->
+      <div class="mkard-section">
+        <div class="mkard-section-title">🎤 Riwayat Jadi Petugas</div>
+        <div id="da-petugas"></div>
+      </div>
+
+      <!-- Tuan Rumah -->
+      <div class="mkard-section">
+        <div class="mkard-section-title">🏠 Tuan Rumah Partonggoan</div>
+        <div id="da-tuan-rumah"></div>
+      </div>
+    </div><!-- /member-kartu -->
+
+    <!-- Footer tombol aksi (tidak ikut capture) -->
+    <div class="mkard-footer" id="da-aksi-footer">
+      <button class="btn-primary" onclick="printKartuAnggota()" style="flex:1">🖨️ Print</button>
+      <button class="btn-gold" onclick="savePhotoAnggota()" style="flex:1">📸 Simpan Foto</button>
+      <button class="btn-outline" onclick="closeModal('m-detail-anggota');clearAnggotaHash()">✕ Tutup</button>
     </div>
   </div>
 </div>
@@ -1238,6 +1321,7 @@ function showAdmin(role){
     document.querySelectorAll('.role-sek').forEach(el=>el.style.display='flex');
     renderAnggota(allAnggota);muatStats();isiTahunSel();muatRekap();muatRiwayat();renderJadwal();
     gotoTab('anggota');
+    cekHashAnggota();
   }
 }
 
@@ -1303,16 +1387,24 @@ function muatStats(){
 // urutan = nomor urut sesuai import/tambah manual
 function renderAnggota(list){
   const tbody=document.getElementById('member-tbody');
-  if(!list.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#CCC;padding:30px">Belum ada anggota</td></tr>';return;}
+  if(!list.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#CCC;padding:30px">Belum ada anggota</td></tr>';return;}
   tbody.innerHTML=list.map((a,i)=>{
     const tot=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama).length;
     const nomor=a.urutan||i+1;
+    // Iuran 2026
+    const recIu=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&Number(iu.tahun||0)===2026);
+    const nomIu=recIu?Number(recIu.nominal||0):0;
+    let iuranBadge;
+    if(nomIu>=160000) iuranBadge=`<span class="chip chip-teal">✅ Lunas</span>`;
+    else if(nomIu>0) iuranBadge=`<span class="chip chip-gold">⚠ Rp ${nomIu.toLocaleString('id-ID')}</span>`;
+    else iuranBadge=`<span class="chip chip-red" style="background:var(--red-light);color:var(--red)">— Belum</span>`;
     return `<tr>
       <td class="center"><div class="badge-no">${nomor}</div></td>
-      <td style="cursor:pointer;font-weight:700" onclick="bukaDetailAnggota('${a.id}')" title="Lihat detail">${a.nama}</td>
+      <td style="cursor:pointer;font-weight:700;color:var(--brown)" onclick="bukaDetailAnggota('${a.id}')" title="Klik untuk lihat kartu anggota">${a.nama}</td>
       <td style="color:#666;font-size:12px">${a.alamat||'<span style="color:#CCC">—</span>'}</td>
       <td style="color:#888;font-size:12px">${a.no_hp||'<span style="color:#CCC">—</span>'}</td>
       <td class="center"><span class="chip chip-green">${tot}x</span></td>
+      <td class="center">${iuranBadge}</td>
       <td>
         <div style="display:flex;gap:6px">
           <button class="btn-sm btn-sm-gold" onclick="bukaEditAnggota('${a.id}')">✏️ Edit</button>
@@ -1436,34 +1528,140 @@ async function simpanEditAnggota(){
   closeModal('m-edit-anggota');renderAnggota(allAnggota);showToast('✅ Data anggota diperbarui!');
 }
 
-// ═══ DETAIL ANGGOTA ═══
+// ═══ DETAIL ANGGOTA (Kartu History) ═══
+const IU_TARGET = 160000;
+
 function bukaDetailAnggota(id){
   const a=allAnggota.find(x=>x.id===id);if(!a)return;
+  const nomor=a.urutan||allAnggota.findIndex(x=>x.id===id)+1;
+
+  // Set URL hash
+  window.location.hash=nomor;
+
+  // Header
   document.getElementById('da-avatar').textContent=a.nama[0].toUpperCase();
   document.getElementById('da-nama').textContent=a.nama;
   document.getElementById('da-sub').textContent=(a.no_hp||'Tanpa HP')+' · '+(a.alamat||'Tanpa Alamat');
-  document.getElementById('da-info').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div style="background:#F8F9FC;border-radius:9px;padding:10px 12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--brown);margin-bottom:2px">📞 No. HP</div><div style="font-size:13px;font-weight:700">${a.no_hp||'—'}</div></div><div style="background:#F8F9FC;border-radius:9px;padding:10px 12px"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--brown);margin-bottom:2px">✅ Total Hadir</div><div style="font-size:13px;font-weight:700;color:var(--green)">${allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama).length}x</div></div><div style="background:#F8F9FC;border-radius:9px;padding:10px 12px;grid-column:1/-1"><div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--brown);margin-bottom:2px">📍 Alamat</div><div style="font-size:13px">${a.alamat||'—'}</div></div></div>`;
-  // Jadwal tuan rumah
-  const jTR=jadwalList.filter(j=>j.tuan_rumah&&j.tuan_rumah.toLowerCase()===a.nama.toLowerCase()).sort((x,y)=>x.nomor-y.nomor);
-  document.getElementById('da-tuan-rumah').innerHTML=jTR.length
-    ?jTR.map(j=>`<div class="timeline-item"><span class="timeline-badge chip chip-gold">P${j.nomor}</span><div><div style="font-size:12px;font-weight:700;color:var(--dark)">${j.tanggal||'—'}</div><div style="font-size:11px;color:#AAA">${j.tempat||'—'}</div></div></div>`).join('')
-    :'<div style="color:#CCC;font-size:13px;padding:8px 0">Belum pernah menjadi tuan rumah</div>';
-  // Riwayat petugas
-  const peran=[
+  document.getElementById('da-no-badge').textContent='#'+nomor;
+  document.getElementById('da-url-hash').textContent='sumbayak.vercel.app#'+nomor;
+
+  // Statistik
+  const absenAnggota=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama);
+  const totalHadir=absenAnggota.length;
+  const totalJadwal=jadwalList.length;
+  const peranList=[
     ...jadwalList.filter(j=>j.parambilan&&j.parambilan.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Parambilan',clr:'chip-green'})),
     ...jadwalList.filter(j=>j.siboan_doding&&j.siboan_doding.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Siboan Doding',clr:'chip-gold'})),
     ...jadwalList.filter(j=>j.tonggo_syafaat&&j.tonggo_syafaat.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Tonggo Syafaat',clr:'chip-red'})),
   ].sort((x,y)=>x.nomor-y.nomor);
-  document.getElementById('da-petugas').innerHTML=peran.length
-    ?peran.map(p=>`<div class="timeline-item"><span class="timeline-badge chip ${p.clr}">${p.peran}</span><div><div style="font-size:12px;font-weight:700;color:var(--dark)">Partonggoan ${p.nomor}</div><div style="font-size:11px;color:#AAA">${p.tanggal||'—'}</div></div></div>`).join('')
-    :'<div style="color:#CCC;font-size:13px;padding:8px 0">Belum pernah jadi petugas</div>';
-  // Riwayat kehadiran
-  const absen=[...allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama)].sort((x,y)=>new Date(x.waktu||0)-new Date(y.waktu||0));
-  document.getElementById('da-kehadiran').innerHTML=absen.length
-    ?absen.map((ab,i)=>`<div class="timeline-item"><span style="background:var(--green-light);color:var(--green);width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${i+1}</span><div><div style="font-size:12px;font-weight:700">${ab.tanggal_acara||ab.nama_acara||'—'}</div><div style="font-size:11px;color:#AAA">${ab.waktu?new Date(ab.waktu).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'—'} · ${ab.jumlah||1} orang</div></div></div>`).join('')
-    :'<div style="color:#CCC;font-size:13px;padding:8px 0">Belum pernah hadir</div>';
+  const jTR=jadwalList.filter(j=>j.tuan_rumah&&j.tuan_rumah.toLowerCase()===a.nama.toLowerCase());
+
+  document.getElementById('da-s-hadir').textContent=totalHadir;
+  document.getElementById('da-s-total').textContent=totalJadwal;
+  document.getElementById('da-s-petugas').textContent=peranList.length;
+  document.getElementById('da-s-tuan').textContent=jTR.length;
+
+  // Iuran 2026 — ambil dari allIuran (data bendahara)
+  const TAHUN_IU=2026;
+  const recIuran=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&Number(iu.tahun||0)===TAHUN_IU);
+  const nomIuran=recIuran?Number(recIuran.nominal||0):0;
+  const fmtRp=n=>'Rp '+n.toLocaleString('id-ID');
+  const iuranIcon=document.getElementById('da-iuran-icon');
+  const iuranNom=document.getElementById('da-iuran-nominal');
+  const iuranSts=document.getElementById('da-iuran-status');
+  if(nomIuran>=IU_TARGET){
+    iuranIcon.style.background='var(--teal-light)';iuranIcon.textContent='✅';
+    iuranNom.textContent=fmtRp(nomIuran);
+    iuranSts.textContent='LUNAS';iuranSts.style.background='var(--teal-light)';iuranSts.style.color='var(--teal)';
+  } else if(nomIuran>0){
+    iuranIcon.style.background='#FEF9EC';iuranIcon.textContent='⚠️';
+    iuranNom.textContent=fmtRp(nomIuran)+' / '+fmtRp(IU_TARGET);
+    iuranSts.textContent='SEBAGIAN';iuranSts.style.background='#FEF9EC';iuranSts.style.color='#9A7800';
+  } else {
+    iuranIcon.style.background='var(--red-light)';iuranIcon.textContent='❌';
+    iuranNom.textContent='Belum bayar';
+    iuranSts.textContent='BELUM';iuranSts.style.background='var(--red-light)';iuranSts.style.color='var(--red)';
+  }
+
+  // Dot Grid kehadiran per partonggoan
+  const sortedJadwal=[...jadwalList].sort((a,b)=>a.nomor-b.nomor);
+  const grid=document.getElementById('da-hadir-grid');
+  const empty=document.getElementById('da-hadir-empty');
+  if(sortedJadwal.length){
+    empty.style.display='none';
+    const hadirTanggal=new Set(absenAnggota.map(ab=>ab.tanggal_acara));
+    grid.innerHTML=sortedJadwal.map(j=>{
+      const hadir=hadirTanggal.has(j.tanggal);
+      return `<div class="mkard-hadir-dot ${hadir?'hadir':'absen'}" title="P${j.nomor} — ${j.tanggal||'—'}\n${hadir?'✅ Hadir':'—  Absen'}">P${j.nomor}</div>`;
+    }).join('');
+  } else {
+    grid.innerHTML='';
+    empty.style.display='block';
+  }
+
+  // Riwayat petugas
+  document.getElementById('da-petugas').innerHTML=peranList.length
+    ?peranList.map(p=>`<div class="mkard-petugas-item"><span class="chip ${p.clr}" style="font-size:10px;white-space:nowrap">${p.peran}</span><div style="flex:1"><span style="font-size:12px;font-weight:700">Partonggoan ${p.nomor}</span> <span style="font-size:11px;color:#AAA">${p.tanggal||'—'}</span></div></div>`).join('')
+    :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah jadi petugas</div>';
+
+  // Tuan rumah
+  document.getElementById('da-tuan-rumah').innerHTML=jTR.length
+    ?jTR.map(j=>`<div class="mkard-petugas-item"><span class="chip chip-gold" style="font-size:10px;white-space:nowrap">P${j.nomor}</span><div style="flex:1"><span style="font-size:12px;font-weight:700">${j.tanggal||'—'}</span><span style="font-size:11px;color:#AAA;display:block">${j.tempat||'—'}</span></div></div>`).join('')
+    :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah menjadi tuan rumah</div>';
+
   openModal('m-detail-anggota');
 }
+
+function clearAnggotaHash(){
+  history.pushState('',document.title,window.location.pathname+window.location.search);
+}
+
+// Buka detail dari URL hash saat load
+function cekHashAnggota(){
+  const h=window.location.hash.replace('#','');
+  if(!h||isNaN(h))return;
+  const no=parseInt(h);
+  const a=allAnggota.find(x=>(x.urutan||0)===no)||allAnggota[no-1];
+  if(a)setTimeout(()=>bukaDetailAnggota(a.id),400);
+}
+
+// Print kartu anggota
+function printKartuAnggota(){
+  const kartu=document.getElementById('member-kartu');
+  const footer=document.getElementById('da-aksi-footer');
+  footer.style.display='none';
+  const W=window.open('','_blank','width=520,height=700');
+  W.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;padding:0;background:white;font-family:'Lato',sans-serif;}
+*{box-sizing:border-box;}
+${Array.from(document.styleSheets).map(s=>{try{return Array.from(s.cssRules).map(r=>r.cssText).join('\n');}catch(e){return '';}}).join('\n')}
+</style></head><body>${kartu.outerHTML}
+<script>window.onload=function(){window.print();window.close();}<\/script></body></html>`);
+  W.document.close();
+  footer.style.display='';
+}
+
+// Simpan foto kartu anggota
+async function savePhotoAnggota(){
+  if(typeof html2canvas==='undefined'){showToast('❌ Library photo belum siap');return;}
+  const footer=document.getElementById('da-aksi-footer');
+  footer.style.display='none';
+  const kartu=document.getElementById('member-kartu');
+  try{
+    showToast('📸 Menyimpan foto...');
+    const canvas=await html2canvas(kartu,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false});
+    const link=document.createElement('a');
+    const nama=document.getElementById('da-nama').textContent.replace(/\s+/g,'_');
+    link.download=`Kartu_Anggota_${nama}.png`;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+    showToast('✅ Foto berhasil disimpan!');
+  }catch(e){showToast('❌ Gagal menyimpan: '+e.message);}
+  finally{footer.style.display='';}
+}
+
 
 // ═══ IMPORT EXCEL ═══
 function bacaExcel(input){
