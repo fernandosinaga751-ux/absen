@@ -1327,6 +1327,15 @@ const CFG = {
 const {createClient} = supabase;
 const db = createClient(CFG.supabaseUrl, CFG.supabaseKey);
 
+// ── MASKING NOMOR HP: sembunyikan 4 digit terakhir ──
+// "08123456789" → "0812345xxxx"  |  "0812" → "xxxx"
+function maskHP(hp){
+  if(!hp) return 'Tanpa HP';
+  const s=String(hp).replace(/\s+/g,'');
+  if(s.length<=4) return 'xxxx';
+  return s.slice(0,s.length-4)+'xxxx';
+}
+
 let allAnggota=[], allAbsen=[], jadwalList=[], importData=[], pengurusDB=[], allIuran=[];
 let ekAnggotaId=null, ekAnggotaNama=null, ekTahun=null, ekJadwal=[];
 let currentRole='sekretaris';
@@ -1737,7 +1746,7 @@ function bukaDetailAnggota(id){
     avatarEl.style.background='linear-gradient(135deg,var(--gold),#A0782A)';
   }
   document.getElementById('da-nama').textContent=a.nama;
-  document.getElementById('da-sub').textContent=(a.no_hp||'Tanpa HP')+' · '+(a.alamat||'Tanpa Alamat');
+  document.getElementById('da-sub').textContent=maskHP(a.no_hp)+' · '+(a.alamat||'Tanpa Alamat');
   document.getElementById('da-no-badge').textContent='#'+nomor;
   document.getElementById('da-url-hash').textContent='sumbayak.vercel.app#'+nomor;
 
@@ -1885,7 +1894,7 @@ async function tampilKartuPublik(nomor){
       pubAvatar.style.background='linear-gradient(135deg,var(--gold),#A0782A)';
     }
     document.getElementById('pub-nama').textContent=a.nama;
-    document.getElementById('pub-sub').textContent=(a.no_hp||'Tanpa HP')+' · '+(a.alamat||'Tanpa Alamat');
+    document.getElementById('pub-sub').textContent=maskHP(a.no_hp)+' · '+(a.alamat||'Tanpa Alamat');
     document.getElementById('pub-no-badge').textContent='#'+nomorTampil;
     document.getElementById('pub-url-hash').textContent='sumbayak.vercel.app#'+nomorTampil;
 
@@ -2514,7 +2523,7 @@ function muatRekap(){
     const pct=jt.length>0?Math.round((tot/jt.length)*100):0;
     return `<tr id="row-${a.id}">
       <td class="center" style="color:#AAA;font-size:12px">${a.urutan||idx+1}</td>
-      <td class="rekap-nama" onclick="bukaEditKehadiran('${a.id}','${esc(a.nama)}',${tahun})" title="Klik untuk edit semua kehadiran">${a.nama}<br><span style="font-size:10px;color:#AAA;font-weight:400">${a.no_hp||''}</span></td>
+      <td class="rekap-nama" onclick="bukaEditKehadiran('${a.id}','${esc(a.nama)}',${tahun})" title="Klik untuk edit semua kehadiran">${a.nama}<br><span style="font-size:10px;color:#AAA;font-weight:400">${maskHP(a.no_hp)}</span></td>
       ${cols}
       <td class="center" id="total-${a.id}"><span class="chip chip-gold">${tot}/${jt.length}</span><br><span style="font-size:10px;color:#AAA">${pct}%</span></td>
     </tr>`;
