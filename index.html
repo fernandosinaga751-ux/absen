@@ -355,6 +355,7 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
       <button class="nav-item role-sek" onclick="gotoTab('riwayat')" id="nav-riwayat"><span class="nav-icon">📋</span>Riwayat</button>
       <button class="nav-item role-sek" onclick="gotoTab('jadwal')" id="nav-jadwal"><span class="nav-icon">📅</span>Jadwal Partonggoan</button>
       <button class="nav-item role-sek" onclick="gotoTab('pengurus')" id="nav-pengurus"><span class="nav-icon">🏛️</span>Pengurus</button>
+      <button class="nav-item role-sek" onclick="gotoTab('foto')" id="nav-foto"><span class="nav-icon">📷</span>Upload Foto</button>
       <!-- Nav Bendahara (tersembunyi default) -->
       <button class="nav-item role-ben" onclick="gotoTab('b-analis')" id="nav-b-analis" style="display:none"><span class="nav-icon">📈</span>Analisis Keuangan</button>
       <button class="nav-item role-ben" onclick="gotoTab('b-anggota')" id="nav-b-anggota" style="display:none"><span class="nav-icon">👥</span>Daftar Anggota</button>
@@ -534,6 +535,40 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
             <div id="pengurus-form"></div>
             <button class="btn-primary" onclick="simpanPengurus()" style="margin-top:10px">💾 Simpan Perubahan</button>
             <span id="pengurus-msg" style="font-size:12px;margin-left:10px"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ TAB FOTO ══════ -->
+      <div id="tab-foto" style="display:none" class="fade-in">
+
+        <!-- Info alur -->
+        <div class="section-card" style="border-left:4px solid var(--gold)">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="font-size:32px">📷</div>
+            <div>
+              <div style="font-family:'Playfair Display',serif;font-size:16px;color:var(--dark);margin-bottom:4px">Manajemen Foto Profil Anggota</div>
+              <div style="font-size:12px;color:#888;line-height:1.8">Anggota upload foto sendiri dari kartu publik (<b>sumbayak.vercel.app#nomor</b>). Foto masuk ke daftar <b>Menunggu Konfirmasi</b> di bawah. Admin menyetujui atau menolak sebelum foto ditampilkan di kartu anggota.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daftar foto pending -->
+        <div class="section-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+            <h3 style="margin:0;padding:0;border:none">⏳ Menunggu Konfirmasi Admin</h3>
+            <button class="btn-sm btn-sm-teal" onclick="muatFotoTab()">🔄 Refresh</button>
+          </div>
+          <div id="foto-pending-list">
+            <div style="text-align:center;padding:30px;color:#CCC">Memuat data...</div>
+          </div>
+        </div>
+
+        <!-- Daftar foto sudah disetujui -->
+        <div class="section-card">
+          <h3>✅ Foto Anggota Aktif</h3>
+          <div id="foto-approved-list">
+            <div style="text-align:center;padding:30px;color:#CCC">Memuat data...</div>
           </div>
         </div>
       </div>
@@ -917,7 +952,7 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
       <!-- Header -->
       <div class="mkard-header">
         <div class="mkard-header-top">
-          <div class="mkard-avatar-lg" id="pub-avatar">?</div>
+          <div class="mkard-avatar-lg" id="pub-avatar" style="overflow:hidden;padding:0">?</div>
           <div class="mkard-title">
             <h2 id="pub-nama">—</h2>
             <p id="pub-sub">—</p>
@@ -937,26 +972,63 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
       <div class="mkard-iuran" id="pub-iuran-row">
         <div class="mkard-iuran-icon" id="pub-iuran-icon" style="background:var(--green-light)">💳</div>
         <div class="mkard-iuran-info">
-          <div class="mkard-iuran-label">Iuran 2026</div>
+          <div class="mkard-iuran-label">Iuran <span id="pub-iuran-tahun">2026</span></div>
           <div class="mkard-iuran-val" id="pub-iuran-nominal">—</div>
         </div>
         <div class="mkard-iuran-status" id="pub-iuran-status">—</div>
       </div>
+      <!-- Iuran semua tahun -->
+      <div id="pub-iuran-all-years" style="display:none;padding:0 20px 12px;border-bottom:1px solid #F0F2F5"></div>
+      <!-- Toggle semua tahun -->
+      <div style="padding:6px 20px;border-bottom:1px solid #F0F2F5;text-align:center">
+        <button onclick="togglePubIuranYears()" id="pub-iuran-toggle" style="font-size:11px;color:var(--teal);background:none;border:none;cursor:pointer;font-weight:700;font-family:'Lato',sans-serif">▼ Lihat Iuran Semua Tahun</button>
+      </div>
       <!-- Kehadiran -->
       <div class="mkard-section">
-        <div class="mkard-section-title">✅ Kehadiran per Partonggoan</div>
+        <div class="mkard-section-title">✅ Kehadiran Partonggoan 2026 <span id="pub-hadir-year-badge" style="background:var(--teal-light);color:var(--teal);padding:1px 8px;border-radius:6px;font-size:9px;margin-left:4px">2026</span></div>
         <div class="mkard-hadir-grid" id="pub-hadir-grid"></div>
         <div id="pub-hadir-empty" style="display:none;color:#CCC;font-size:13px;padding:4px 0">Belum ada data kehadiran</div>
       </div>
       <!-- Petugas -->
       <div class="mkard-section">
-        <div class="mkard-section-title">🎤 Riwayat Jadi Petugas</div>
+        <div class="mkard-section-title">🎤 Riwayat Jadi Petugas 2026</div>
         <div id="pub-petugas"></div>
       </div>
       <!-- Tuan Rumah -->
       <div class="mkard-section">
-        <div class="mkard-section-title">🏠 Tuan Rumah Partonggoan</div>
+        <div class="mkard-section-title">🏠 Tuan Rumah Partonggoan 2026</div>
         <div id="pub-tuan-rumah"></div>
+      </div>
+
+      <!-- Upload Foto Profil (oleh anggota sendiri) -->
+      <div class="mkard-section" id="pub-upload-foto-section">
+        <div class="mkard-section-title">📷 Foto Profil Saya</div>
+        <div id="pub-foto-status-wrap" style="margin-bottom:10px"></div>
+        <div id="pub-upload-form">
+          <label for="pub-foto-file" style="display:flex;align-items:center;gap:10px;cursor:pointer;background:#F8F9FC;border:2px dashed var(--gold);border-radius:12px;padding:14px 16px;transition:all .2s" onmouseover="this.style.background='#FFF8EE'" onmouseout="this.style.background='#F8F9FC'">
+            <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--brown));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📷</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--dark)">Upload Foto Profil Saya</div>
+              <div style="font-size:11px;color:#AAA;margin-top:2px">JPG / PNG · Max 5MB · Menunggu persetujuan admin</div>
+            </div>
+          </label>
+          <input type="file" id="pub-foto-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="pubPreviewFoto(this)"/>
+          <!-- Preview -->
+          <div id="pub-foto-preview-wrap" style="display:none;margin-top:12px">
+            <div style="display:flex;align-items:center;gap:12px;background:#F8F9FC;border-radius:12px;padding:12px 14px">
+              <img id="pub-foto-preview-img" src="" style="width:60px;height:60px;border-radius:12px;object-fit:cover;border:2px solid var(--gold);flex-shrink:0"/>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:12px;font-weight:700;color:var(--dark)" id="pub-foto-preview-nama">—</div>
+                <div style="font-size:11px;color:#AAA;margin-top:2px">Siap dikirim ke admin untuk disetujui</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <button onclick="pubKirimFoto()" style="padding:7px 14px;background:linear-gradient(135deg,var(--green),#3D6B3F);color:white;border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif;white-space:nowrap">📤 Kirim</button>
+                <button onclick="pubBatalFoto()" style="padding:5px 14px;background:transparent;color:#AAA;border:1px solid #E8E0D5;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Lato',sans-serif">Batal</button>
+              </div>
+            </div>
+          </div>
+          <div id="pub-foto-upload-msg" style="font-size:12px;margin-top:8px;text-align:center"></div>
+        </div>
       </div>
     </div>
     <!-- Error state -->
@@ -970,7 +1042,6 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
   <div class="publik-actions" id="publik-actions" style="display:none">
     <button class="btn-primary" onclick="printKartuPublik()" style="flex:1">🖨️ Print</button>
     <button class="btn-gold" onclick="savePhotoPublik()" style="flex:1">📸 Simpan Foto</button>
-    <button class="btn-outline" onclick="window.location.hash='';window.location.href=window.location.pathname" style="background:rgba(255,255,255,.9);flex:1">🔑 Login Admin</button>
   </div>
   <div class="publik-branding">Partonggoan TSBP Medan Timur</div>
 </div>
@@ -1093,7 +1164,7 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
       <!-- Header -->
       <div class="mkard-header">
         <div class="mkard-header-top">
-          <div class="mkard-avatar-lg" id="da-avatar">?</div>
+          <div class="mkard-avatar-lg" id="da-avatar" style="overflow:hidden;padding:0">?</div>
           <div class="mkard-title">
             <h2 id="da-nama">—</h2>
             <p id="da-sub">—</p>
@@ -1127,28 +1198,33 @@ body.role-bendahara .section-card h3{border-bottom-color:var(--teal-light);}
       <div class="mkard-iuran" id="da-iuran-row">
         <div class="mkard-iuran-icon" id="da-iuran-icon" style="background:var(--green-light)">💳</div>
         <div class="mkard-iuran-info">
-          <div class="mkard-iuran-label">Iuran 2026</div>
+          <div class="mkard-iuran-label">Iuran <span id="da-iuran-tahun">2026</span></div>
           <div class="mkard-iuran-val" id="da-iuran-nominal">—</div>
         </div>
         <div class="mkard-iuran-status" id="da-iuran-status">—</div>
       </div>
+      <!-- Semua tahun iuran -->
+      <div id="da-iuran-all-years" style="display:none;padding:0 20px 12px;border-bottom:1px solid #F0F2F5"></div>
+      <div style="padding:6px 20px;border-bottom:1px solid #F0F2F5;text-align:center">
+        <button onclick="toggleDaIuranYears()" id="da-iuran-toggle" style="font-size:11px;color:var(--teal);background:none;border:none;cursor:pointer;font-weight:700;font-family:'Lato',sans-serif">▼ Lihat Iuran Semua Tahun</button>
+      </div>
 
       <!-- Riwayat Kehadiran per Partonggoan (dot grid) -->
       <div class="mkard-section">
-        <div class="mkard-section-title">✅ Kehadiran per Partonggoan</div>
+        <div class="mkard-section-title">✅ Kehadiran Partonggoan 2026</div>
         <div class="mkard-hadir-grid" id="da-hadir-grid"></div>
         <div id="da-hadir-empty" style="display:none;color:#CCC;font-size:13px;padding:4px 0">Belum ada data kehadiran</div>
       </div>
 
       <!-- Riwayat Bertugas -->
       <div class="mkard-section">
-        <div class="mkard-section-title">🎤 Riwayat Jadi Petugas</div>
+        <div class="mkard-section-title">🎤 Riwayat Jadi Petugas 2026</div>
         <div id="da-petugas"></div>
       </div>
 
       <!-- Tuan Rumah -->
       <div class="mkard-section">
-        <div class="mkard-section-title">🏠 Tuan Rumah Partonggoan</div>
+        <div class="mkard-section-title">🏠 Tuan Rumah Partonggoan 2026</div>
         <div id="da-tuan-rumah"></div>
       </div>
     </div><!-- /member-kartu -->
@@ -1420,6 +1496,7 @@ function showAdmin(role){
     renderAnggota(allAnggota);muatStats();isiTahunSel();muatRekap();muatRiwayat();renderJadwal();
     gotoTab('anggota');
     cekHashAnggota();
+    muatFotoTab();
   }
 }
 
@@ -1448,9 +1525,9 @@ async function loadPublicData(){
 }
 
 // ═══ TAB NAV ═══
-const SEK_TABS=['anggota','rekap','riwayat','jadwal','pengurus'];
+const SEK_TABS=['anggota','rekap','riwayat','jadwal','pengurus','foto'];
 const BEN_TABS=['b-analis','b-anggota','b-iuran','b-galangan','b-keuangan','b-history','b-pengurus'];
-const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus','b-analis':'Analisis Keuangan','b-anggota':'Daftar Anggota','b-iuran':'Rekap Iuran','b-galangan':'Rekap Galangan','b-keuangan':'Rekap Keuangan','b-history':'Histori Transaksi','b-pengurus':'Pengurus'};
+const tabTitles={anggota:'Daftar Anggota',rekap:'Rekap Kehadiran',riwayat:'Riwayat Partonggoan',jadwal:'Jadwal Partonggoan',pengurus:'Pengurus',foto:'Upload Foto Profil','b-analis':'Analisis Keuangan','b-anggota':'Daftar Anggota','b-iuran':'Rekap Iuran','b-galangan':'Rekap Galangan','b-keuangan':'Rekap Keuangan','b-history':'Histori Transaksi','b-pengurus':'Pengurus'};
 function gotoTab(t){
   const allTabs=[...SEK_TABS,...BEN_TABS];
   allTabs.forEach(x=>{
@@ -1471,6 +1548,7 @@ function gotoTab(t){
   if(t==='b-keuangan')bMuatKeuangan();
   if(t==='b-history')bMuatHistory();
   if(t==='b-analis')bMuatAnalis();
+  if(t==='foto')muatFotoTab();
 }
 
 // ═══ STATS ═══
@@ -1637,7 +1715,14 @@ function bukaDetailAnggota(id){
   window.location.hash=nomor;
 
   // Header
-  document.getElementById('da-avatar').textContent=a.nama[0].toUpperCase();
+  const avatarEl=document.getElementById('da-avatar');
+  if(a.photo_url){
+    avatarEl.innerHTML=`<img src="${a.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px" onerror="this.parentElement.textContent='${a.nama[0].toUpperCase()}'"/>`;
+    avatarEl.style.background='none';avatarEl.style.padding='0';
+  } else {
+    avatarEl.textContent=a.nama[0].toUpperCase();
+    avatarEl.style.background='linear-gradient(135deg,var(--gold),#A0782A)';
+  }
   document.getElementById('da-nama').textContent=a.nama;
   document.getElementById('da-sub').textContent=(a.no_hp||'Tanpa HP')+' · '+(a.alamat||'Tanpa Alamat');
   document.getElementById('da-no-badge').textContent='#'+nomor;
@@ -1647,23 +1732,27 @@ function bukaDetailAnggota(id){
   const absenAnggota=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama);
   const totalHadir=absenAnggota.length;
   const totalJadwal=jadwalList.length;
+  // Filter 2026 untuk bertugas & tuan rumah
+  const jadwal2026=jadwalList.filter(j=>String(j.tanggal||'').includes('2026'));
   const peranList=[
-    ...jadwalList.filter(j=>j.parambilan&&j.parambilan.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Parambilan',clr:'chip-green'})),
-    ...jadwalList.filter(j=>j.siboan_doding&&j.siboan_doding.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Siboan Doding',clr:'chip-gold'})),
-    ...jadwalList.filter(j=>j.tonggo_syafaat&&j.tonggo_syafaat.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Tonggo Syafaat',clr:'chip-red'})),
+    ...jadwal2026.filter(j=>j.parambilan&&j.parambilan.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Parambilan',clr:'chip-green'})),
+    ...jadwal2026.filter(j=>j.siboan_doding&&j.siboan_doding.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Siboan Doding',clr:'chip-gold'})),
+    ...jadwal2026.filter(j=>j.tonggo_syafaat&&j.tonggo_syafaat.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Tonggo Syafaat',clr:'chip-red'})),
   ].sort((x,y)=>x.nomor-y.nomor);
-  const jTR=jadwalList.filter(j=>j.tuan_rumah&&j.tuan_rumah.toLowerCase()===a.nama.toLowerCase());
+  const jTR=jadwal2026.filter(j=>j.tuan_rumah&&j.tuan_rumah.toLowerCase()===a.nama.toLowerCase());
 
   document.getElementById('da-s-hadir').textContent=totalHadir;
   document.getElementById('da-s-total').textContent=totalJadwal;
   document.getElementById('da-s-petugas').textContent=peranList.length;
   document.getElementById('da-s-tuan').textContent=jTR.length;
 
-  // Iuran 2026 — ambil dari allIuran (data bendahara)
-  const TAHUN_IU=2026;
-  const recIuran=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&Number(iu.tahun||0)===TAHUN_IU);
-  const nomIuran=recIuran?Number(recIuran.nominal||0):0;
+  // Iuran — tampilkan tahun terbaru yang ada data, fallback 2026
   const fmtRp=n=>'Rp '+n.toLocaleString('id-ID');
+  const iuranAnggota=allIuran.filter(iu=>iu.anggota_id===a.id||iu.nama===a.nama).sort((x,y)=>Number(y.tahun||0)-Number(x.tahun||0));
+  const tahunTampil=iuranAnggota.length?Number(iuranAnggota[0].tahun):2026;
+  const recIuran=iuranAnggota[0]||null;
+  const nomIuran=recIuran?Number(recIuran.nominal||0):0;
+  document.getElementById('da-iuran-tahun').textContent=tahunTampil;
   const iuranIcon=document.getElementById('da-iuran-icon');
   const iuranNom=document.getElementById('da-iuran-nominal');
   const iuranSts=document.getElementById('da-iuran-status');
@@ -1680,9 +1769,27 @@ function bukaDetailAnggota(id){
     iuranNom.textContent='Belum bayar';
     iuranSts.textContent='BELUM';iuranSts.style.background='var(--red-light)';iuranSts.style.color='var(--red)';
   }
+  // Semua tahun iuran
+  const allYearsEl=document.getElementById('da-iuran-all-years');
+  if(iuranAnggota.length>1){
+    allYearsEl.innerHTML=iuranAnggota.map(iu=>{
+      const n=Number(iu.nominal||0);const lns=n>=IU_TARGET;const seb=n>0&&n<IU_TARGET;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F5F5F5">
+        <span style="font-size:12px;color:#666">Tahun ${iu.tahun}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;font-weight:700;color:var(--dark)">${n?fmtRp(n):'—'}</span>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;${lns?'background:var(--teal-light);color:var(--teal)':seb?'background:#FEF9EC;color:#9A7800':'background:var(--red-light);color:var(--red)'}">${lns?'Lunas':seb?'Sebagian':'Belum'}</span>
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('da-iuran-toggle').style.display='inline-block';
+  } else {
+    document.getElementById('da-iuran-toggle').style.display='none';
+  }
+  allYearsEl.style.display='none';
 
-  // Dot Grid kehadiran per partonggoan
-  const sortedJadwal=[...jadwalList].sort((a,b)=>a.nomor-b.nomor);
+  // Dot Grid kehadiran per partonggoan — filter 2026
+  const sortedJadwal=[...jadwal2026].sort((a,b)=>a.nomor-b.nomor);
   const grid=document.getElementById('da-hadir-grid');
   const empty=document.getElementById('da-hadir-empty');
   if(sortedJadwal.length){
@@ -1700,12 +1807,12 @@ function bukaDetailAnggota(id){
   // Riwayat petugas
   document.getElementById('da-petugas').innerHTML=peranList.length
     ?peranList.map(p=>`<div class="mkard-petugas-item"><span class="chip ${p.clr}" style="font-size:10px;white-space:nowrap">${p.peran}</span><div style="flex:1"><span style="font-size:12px;font-weight:700">Partonggoan ${p.nomor}</span> <span style="font-size:11px;color:#AAA">${p.tanggal||'—'}</span></div></div>`).join('')
-    :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah jadi petugas</div>';
+    :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah jadi petugas di 2026</div>';
 
   // Tuan rumah
   document.getElementById('da-tuan-rumah').innerHTML=jTR.length
     ?jTR.map(j=>`<div class="mkard-petugas-item"><span class="chip chip-gold" style="font-size:10px;white-space:nowrap">P${j.nomor}</span><div style="flex:1"><span style="font-size:12px;font-weight:700">${j.tanggal||'—'}</span><span style="font-size:11px;color:#AAA;display:block">${j.tempat||'—'}</span></div></div>`).join('')
-    :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah menjadi tuan rumah</div>';
+    :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah menjadi tuan rumah di 2026</div>';
 
   openModal('m-detail-anggota');
 }
@@ -1755,30 +1862,43 @@ async function tampilKartuPublik(nomor){
 
     // Isi kartu
     const nomorTampil=a.urutan||nomor;
-    document.getElementById('pub-avatar').textContent=a.nama[0].toUpperCase();
+    // Avatar / photo
+    const pubAvatar=document.getElementById('pub-avatar');
+    if(a.photo_url){
+      pubAvatar.innerHTML=`<img src="${a.photo_url}" style="width:100%;height:100%;object-fit:cover;border-radius:16px" onerror="this.parentElement.innerHTML='${a.nama[0].toUpperCase()}';this.parentElement.style.background='linear-gradient(135deg,var(--gold),#A0782A)'"/>`;
+      pubAvatar.style.background='none';
+    } else {
+      pubAvatar.textContent=a.nama[0].toUpperCase();
+      pubAvatar.style.background='linear-gradient(135deg,var(--gold),#A0782A)';
+    }
     document.getElementById('pub-nama').textContent=a.nama;
     document.getElementById('pub-sub').textContent=(a.no_hp||'Tanpa HP')+' · '+(a.alamat||'Tanpa Alamat');
     document.getElementById('pub-no-badge').textContent='#'+nomorTampil;
     document.getElementById('pub-url-hash').textContent='sumbayak.vercel.app#'+nomorTampil;
 
-    // Statistik kehadiran
+    // Statistik kehadiran — filter 2026
     const absenAnggota=allAbsen.filter(ab=>ab.anggota_id===a.id||ab.nama===a.nama);
+    const jadwal2026=jadwalList.filter(j=>String(j.tanggal||'').includes('2026'));
     const peranList=[
-      ...jadwalList.filter(j=>j.parambilan&&j.parambilan.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Parambilan',clr:'chip-green'})),
-      ...jadwalList.filter(j=>j.siboan_doding&&j.siboan_doding.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Siboan Doding',clr:'chip-gold'})),
-      ...jadwalList.filter(j=>j.tonggo_syafaat&&j.tonggo_syafaat.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Tonggo Syafaat',clr:'chip-red'})),
+      ...jadwal2026.filter(j=>j.parambilan&&j.parambilan.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Parambilan',clr:'chip-green'})),
+      ...jadwal2026.filter(j=>j.siboan_doding&&j.siboan_doding.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Siboan Doding',clr:'chip-gold'})),
+      ...jadwal2026.filter(j=>j.tonggo_syafaat&&j.tonggo_syafaat.toLowerCase()===a.nama.toLowerCase()).map(j=>({nomor:j.nomor,tanggal:j.tanggal,peran:'Tonggo Syafaat',clr:'chip-red'})),
     ].sort((x,y)=>x.nomor-y.nomor);
-    const jTR=jadwalList.filter(j=>j.tuan_rumah&&j.tuan_rumah.toLowerCase()===a.nama.toLowerCase());
+    const jTR=jadwal2026.filter(j=>j.tuan_rumah&&j.tuan_rumah.toLowerCase()===a.nama.toLowerCase());
 
     document.getElementById('pub-s-hadir').textContent=absenAnggota.length;
     document.getElementById('pub-s-total').textContent=jadwalList.length;
     document.getElementById('pub-s-petugas').textContent=peranList.length;
     document.getElementById('pub-s-tuan').textContent=jTR.length;
 
-    // Iuran 2026
-    const recIuran=allIuran.find(iu=>(iu.anggota_id===a.id||iu.nama===a.nama)&&Number(iu.tahun||0)===2026);
-    const nomIuran=recIuran?Number(recIuran.nominal||0):0;
+    // Iuran — tahun terbaru yang ada
     const fmtRp=n=>'Rp '+n.toLocaleString('id-ID');
+    const iuranAnggota=allIuran.filter(iu=>iu.anggota_id===a.id||iu.nama===a.nama).sort((x,y)=>Number(y.tahun||0)-Number(x.tahun||0));
+    const tahunTampil=iuranAnggota.length?Number(iuranAnggota[0].tahun):2026;
+    const recIuran=iuranAnggota[0]||null;
+    const nomIuran=recIuran?Number(recIuran.nominal||0):0;
+    const tahunEl=document.getElementById('pub-iuran-tahun');
+    if(tahunEl) tahunEl.textContent=tahunTampil;
     const iuranIcon=document.getElementById('pub-iuran-icon');
     const iuranNom=document.getElementById('pub-iuran-nominal');
     const iuranSts=document.getElementById('pub-iuran-status');
@@ -1795,9 +1915,28 @@ async function tampilKartuPublik(nomor){
       iuranNom.textContent='Belum bayar';
       iuranSts.textContent='BELUM';iuranSts.style.background='var(--red-light)';iuranSts.style.color='var(--red)';
     }
+    // Semua tahun iuran
+    const allYearsPub=document.getElementById('pub-iuran-all-years');
+    const pubToggle=document.getElementById('pub-iuran-toggle');
+    if(allYearsPub&&iuranAnggota.length>1){
+      allYearsPub.innerHTML=iuranAnggota.map(iu=>{
+        const n=Number(iu.nominal||0);const lns=n>=IU_TARGET;const seb=n>0&&n<IU_TARGET;
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid #F5F5F5">
+          <span style="font-size:12px;color:#666">Tahun ${iu.tahun}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:700;color:#333">${n?fmtRp(n):'—'}</span>
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;${lns?'background:#E0F5F2;color:#1A7A6A':seb?'background:#FEF9EC;color:#9A7800':'background:#FDEDEC;color:#C0392B'}">${lns?'Lunas':seb?'Sebagian':'Belum'}</span>
+          </div>
+        </div>`;
+      }).join('');
+      if(pubToggle) pubToggle.style.display='inline-block';
+    } else {
+      if(pubToggle) pubToggle.style.display='none';
+    }
+    if(allYearsPub) allYearsPub.style.display='none';
 
-    // Dot kehadiran per partonggoan
-    const sortedJadwal=[...jadwalList].sort((x,y)=>x.nomor-y.nomor);
+    // Dot kehadiran per partonggoan — filter 2026
+    const sortedJadwal=[...jadwal2026].sort((x,y)=>x.nomor-y.nomor);
     const grid=document.getElementById('pub-hadir-grid');
     const empty=document.getElementById('pub-hadir-empty');
     if(sortedJadwal.length){
@@ -1814,18 +1953,30 @@ async function tampilKartuPublik(nomor){
     // Petugas
     document.getElementById('pub-petugas').innerHTML=peranList.length
       ?peranList.map(p=>`<div class="mkard-petugas-item"><span class="chip ${p.clr}" style="font-size:10px;white-space:nowrap">${p.peran}</span><div style="flex:1"><span style="font-size:12px;font-weight:700">Partonggoan ${p.nomor}</span> <span style="font-size:11px;color:#AAA">${p.tanggal||'—'}</span></div></div>`).join('')
-      :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah jadi petugas</div>';
+      :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah jadi petugas di 2026</div>';
 
     // Tuan Rumah
     document.getElementById('pub-tuan-rumah').innerHTML=jTR.length
       ?jTR.map(j=>`<div class="mkard-petugas-item"><span class="chip chip-gold" style="font-size:10px;white-space:nowrap">P${j.nomor}</span><div style="flex:1"><span style="font-size:12px;font-weight:700">${j.tanggal||'—'}</span><span style="font-size:11px;color:#AAA;display:block">${j.tempat||'—'}</span></div></div>`).join('')
-      :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah menjadi tuan rumah</div>';
+      :'<div style="color:#CCC;font-size:13px;padding:4px 0">Belum pernah menjadi tuan rumah di 2026</div>';
 
     // Tampilkan kartu dan tombol
     document.getElementById('publik-loading').style.display='none';
     document.getElementById('publik-kartu-wrap').style.display='block';
     document.getElementById('publik-actions').style.display='flex';
     window._publickAnggotaNama=a.nama;
+    _pubCurrentAnggota=a;
+
+    // Nama di preview upload
+    const prevNama=document.getElementById('pub-foto-preview-nama');
+    if(prevNama) prevNama.textContent=a.nama;
+
+    // Cek status foto anggota
+    await pubCekStatusFoto(a.id);
+
+    // Bind label ke input file
+    const lbl=document.querySelector('label[for="pub-foto-file"]');
+    if(lbl) lbl.onclick=()=>document.getElementById('pub-foto-file').click();
 
   }catch(e){
     document.getElementById('publik-loading').style.display='none';
@@ -4289,6 +4440,254 @@ async function bEksporAnalisPPT(){
 
   await pptx.writeFile({fileName:`Analisis_Keuangan_TSBP_${TAHUN}.pptx`});
   showToast('✅ PowerPoint Analisis berhasil diunduh!');
+}
+
+// ═══ FOTO PROFIL — Upload oleh Anggota Sendiri (Publik) ═══
+let _pubCurrentAnggota = null; // Anggota yang sedang dilihat
+
+function pubPreviewFoto(input){
+  const wrap=document.getElementById('pub-foto-preview-wrap');
+  const img=document.getElementById('pub-foto-preview-img');
+  const namaEl=document.getElementById('pub-foto-preview-nama');
+  const msg=document.getElementById('pub-foto-upload-msg');
+  if(msg) msg.textContent='';
+  if(input.files&&input.files[0]){
+    if(input.files[0].size>5*1024*1024){
+      document.getElementById('pub-foto-upload-msg').style.color='var(--red)';
+      document.getElementById('pub-foto-upload-msg').textContent='❌ Ukuran foto max 5MB';
+      input.value='';return;
+    }
+    const reader=new FileReader();
+    reader.onload=e=>{img.src=e.target.result;};
+    reader.readAsDataURL(input.files[0]);
+    namaEl.textContent=_pubCurrentAnggota?_pubCurrentAnggota.nama:'Anggota';
+    wrap.style.display='block';
+    // trigger click label agar bisa pilih ulang
+    document.getElementById('pub-foto-file').onclick=null;
+  }
+}
+
+function pubBatalFoto(){
+  document.getElementById('pub-foto-preview-wrap').style.display='none';
+  document.getElementById('pub-foto-file').value='';
+  document.getElementById('pub-foto-upload-msg').textContent='';
+}
+
+async function pubKirimFoto(){
+  const a=_pubCurrentAnggota;
+  if(!a){showToast('❌ Data anggota tidak ditemukan');return;}
+  const fileInput=document.getElementById('pub-foto-file');
+  const msg=document.getElementById('pub-foto-upload-msg');
+  if(!fileInput.files||!fileInput.files[0]){msg.style.color='var(--red)';msg.textContent='❌ Pilih foto dulu';return;}
+
+  const file=fileInput.files[0];
+  msg.style.color='var(--teal)';msg.textContent='⏳ Mengunggah foto...';
+
+  try{
+    // Upload ke Supabase Storage
+    const ext=file.name.split('.').pop().toLowerCase()||'jpg';
+    const fileName=`pending/${Date.now()}_${String(a.id||a.nama).replace(/\s+/g,'_')}.${ext}`;
+    const{error:upErr}=await db.storage.from('member-photos').upload(fileName,file,{upsert:true,contentType:file.type});
+    if(upErr) throw new Error(upErr.message);
+
+    // Ambil public URL
+    const{data:urlData}=db.storage.from('member-photos').getPublicUrl(fileName);
+    const photoUrl=urlData.publicUrl;
+
+    // Cek apakah sudah ada pending dari anggota ini
+    await db.from('foto_pending').delete().eq('anggota_id',a.id).eq('status','pending');
+
+    // Simpan ke foto_pending
+    const{error:dbErr}=await db.from('foto_pending').insert({
+      anggota_id:a.id,
+      anggota_nama:a.nama,
+      photo_url:photoUrl,
+      status:'pending',
+      created_at:new Date().toISOString()
+    });
+    if(dbErr) throw new Error(dbErr.message);
+
+    msg.style.color='var(--green)';
+    msg.textContent='✅ Foto berhasil dikirim! Menunggu persetujuan admin.';
+    fileInput.value='';
+    document.getElementById('pub-foto-preview-wrap').style.display='none';
+
+    // Update status tampilan
+    pubTampilStatusFoto('pending');
+  }catch(e){
+    msg.style.color='var(--red)';
+    msg.textContent='❌ '+e.message;
+  }
+}
+
+function pubTampilStatusFoto(status){
+  const wrap=document.getElementById('pub-foto-status-wrap');
+  if(!wrap)return;
+  if(status==='approved'){
+    wrap.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--teal-light);border-radius:10px;font-size:12px;color:var(--teal);font-weight:700">✅ Foto profil sudah disetujui dan tampil di kartu</div>`;
+    document.getElementById('pub-upload-form').style.display='none';
+  } else if(status==='pending'){
+    wrap.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#FEF9EC;border-radius:10px;font-size:12px;color:#9A7800;font-weight:700">⏳ Foto sedang menunggu persetujuan admin</div>`;
+    document.getElementById('pub-upload-form').style.display='block';
+  } else {
+    wrap.innerHTML='';
+    document.getElementById('pub-upload-form').style.display='block';
+  }
+}
+
+async function pubCekStatusFoto(anggotaId){
+  try{
+    // Cek apakah ada pending
+    const{data:pending}=await db.from('foto_pending').select('id,status').eq('anggota_id',anggotaId).eq('status','pending').limit(1);
+    if(pending&&pending.length>0){pubTampilStatusFoto('pending');return;}
+    // Cek apakah sudah punya photo (approved)
+    const anggota=allAnggota.find(a=>a.id===anggotaId);
+    if(anggota&&anggota.photo_url){pubTampilStatusFoto('approved');return;}
+    pubTampilStatusFoto('none');
+  }catch(e){
+    pubTampilStatusFoto('none');
+  }
+}
+
+// ═══ FOTO — Admin Management ═══
+
+// Toggle tampilan semua tahun iuran — public card
+function togglePubIuranYears(){
+  const el=document.getElementById('pub-iuran-all-years');
+  const btn=document.getElementById('pub-iuran-toggle');
+  if(!el)return;
+  const show=el.style.display==='none';
+  el.style.display=show?'block':'none';
+  btn.textContent=show?'▲ Sembunyikan':'▼ Lihat Iuran Semua Tahun';
+}
+
+// Toggle tampilan semua tahun iuran — admin detail modal
+function toggleDaIuranYears(){
+  const el=document.getElementById('da-iuran-all-years');
+  const btn=document.getElementById('da-iuran-toggle');
+  if(!el)return;
+  const show=el.style.display==='none';
+  el.style.display=show?'block':'none';
+  btn.textContent=show?'▲ Sembunyikan':'▼ Lihat Iuran Semua Tahun';
+}
+
+// Muat tab foto (pending + approved)
+async function muatFotoTab(){
+  await Promise.all([muatFotoPending(),muatFotoApproved()]);
+}
+
+// Muat daftar foto pending
+async function muatFotoPending(){
+  const el=document.getElementById('foto-pending-list');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:#CCC">⏳ Memuat...</div>';
+  try{
+    const{data,error}=await db.from('foto_pending').select('*').eq('status','pending').order('created_at',{ascending:false});
+    if(error) throw new Error(error.message);
+    const list=data||[];
+    if(!list.length){el.innerHTML='<div style="text-align:center;padding:24px;color:#CCC;font-size:13px">✅ Tidak ada foto yang menunggu konfirmasi</div>';return;}
+    el.innerHTML=list.map(f=>`
+      <div id="fpend-${f.id}" style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #F0F2F5">
+        <img src="${f.photo_url}" style="width:64px;height:64px;border-radius:12px;object-fit:cover;border:2px solid var(--gold-light);flex-shrink:0" onerror="this.src=''"/>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;color:var(--dark)">${f.anggota_nama||'—'}</div>
+          <div style="font-size:11px;color:#AAA;margin-top:2px">${f.created_at?new Date(f.created_at).toLocaleString('id-ID'):'—'}</div>
+          <span style="display:inline-block;margin-top:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:#FEF9EC;color:#9A7800">⏳ Menunggu Konfirmasi</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button class="btn-sm btn-sm-green" onclick="konfirmasiFoto('${f.id}','${f.anggota_nama}','${f.photo_url}','${f.anggota_id||''}')">✅ Setujui</button>
+          <button class="btn-sm btn-sm-red" onclick="tolakFoto('${f.id}','${f.photo_url}')">❌ Tolak</button>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    el.innerHTML=`<div style="color:var(--red);font-size:12px;padding:12px">Gagal memuat: ${e.message}<br><small style="color:#AAA">Pastikan tabel foto_pending sudah dibuat di Supabase</small></div>`;
+  }
+}
+
+// Muat daftar foto yang sudah disetujui
+async function muatFotoApproved(){
+  const el=document.getElementById('foto-approved-list');
+  if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:#CCC">⏳ Memuat...</div>';
+  try{
+    // Ambil anggota yang punya photo_url
+    const {data,error}=await db.from(CFG.tabelAnggota).select('id,nama,urutan,photo_url').not('photo_url','is',null).order('urutan,nama');
+    if(error) throw new Error(error.message);
+    const list=(data||[]).filter(a=>a.photo_url);
+    if(!list.length){el.innerHTML='<div style="text-align:center;padding:24px;color:#CCC;font-size:13px">Belum ada foto yang disetujui</div>';return;}
+    el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;padding:4px 0">
+      ${list.map(a=>`<div style="text-align:center;background:#F8F9FC;border-radius:12px;padding:14px;position:relative">
+        <img src="${a.photo_url}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);margin-bottom:8px;display:block;margin-left:auto;margin-right:auto"/>
+        <div style="font-size:12px;font-weight:700;color:var(--dark);margin-bottom:2px">${a.nama}</div>
+        <div style="font-size:10px;color:#AAA">#${a.urutan||'—'}</div>
+        <button onclick="hapusFotoAnggota('${a.id}','${a.nama}')" style="margin-top:8px;padding:3px 10px;font-size:10px;font-weight:700;background:var(--red-light);color:var(--red);border:none;border-radius:6px;cursor:pointer;font-family:'Lato',sans-serif">🗑 Hapus</button>
+      </div>`).join('')}
+    </div>`;
+  }catch(e){
+    el.innerHTML=`<div style="color:var(--red);font-size:12px;padding:12px">Gagal memuat: ${e.message}</div>`;
+  }
+}
+
+// Admin menyetujui foto
+async function konfirmasiFoto(id,nama,photoUrl,anggotaId){
+  if(!confirm(`Setujui foto untuk "${nama}"?\nFoto akan langsung tampil di kartu anggota.`))return;
+  try{
+    // Update kolom photo_url di tabel anggota
+    let upd;
+    if(anggotaId){
+      upd=await db.from(CFG.tabelAnggota).update({photo_url:photoUrl}).eq('id',anggotaId);
+    } else {
+      upd=await db.from(CFG.tabelAnggota).update({photo_url:photoUrl}).ilike('nama',nama);
+    }
+    if(upd.error) throw new Error(upd.error.message);
+
+    // Update status pending jadi approved
+    await db.from('foto_pending').update({status:'approved'}).eq('id',id);
+
+    // Update allAnggota di memori
+    const idx=allAnggota.findIndex(a=>(anggotaId&&a.id===anggotaId)||a.nama.toLowerCase()===nama.toLowerCase());
+    if(idx>=0) allAnggota[idx].photo_url=photoUrl;
+
+    showToast(`✅ Foto "${nama}" disetujui dan ditampilkan!`);
+    muatFotoTab();
+  }catch(e){
+    showToast('❌ Gagal: '+e.message);
+  }
+}
+
+// Admin menolak foto
+async function tolakFoto(id,photoUrl){
+  if(!confirm('Tolak dan hapus foto ini?'))return;
+  try{
+    // Hapus dari storage
+    const path=photoUrl.split('/member-photos/')[1];
+    if(path) await db.storage.from('member-photos').remove([path]);
+    // Hapus dari tabel pending
+    await db.from('foto_pending').delete().eq('id',id);
+    showToast('🗑 Foto ditolak dan dihapus');
+    muatFotoPending();
+  }catch(e){
+    showToast('❌ Gagal: '+e.message);
+  }
+}
+
+// Admin hapus foto yang sudah disetujui
+async function hapusFotoAnggota(anggotaId,nama){
+  if(!confirm(`Hapus foto "${nama}"?`))return;
+  try{
+    const a=allAnggota.find(x=>x.id===anggotaId);
+    if(a&&a.photo_url){
+      const path=a.photo_url.split('/member-photos/')[1];
+      if(path) await db.storage.from('member-photos').remove([path]);
+    }
+    await db.from(CFG.tabelAnggota).update({photo_url:null}).eq('id',anggotaId);
+    const idx=allAnggota.findIndex(x=>x.id===anggotaId);
+    if(idx>=0) allAnggota[idx].photo_url=null;
+    showToast(`🗑 Foto "${nama}" dihapus`);
+    muatFotoApproved();
+  }catch(e){
+    showToast('❌ Gagal: '+e.message);
+  }
 }
 
 init();
