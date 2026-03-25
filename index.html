@@ -5,13 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin – Partonggoan TSBP Medan Timur</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" onerror="window.PptxGenJS=null"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -1293,8 +1287,7 @@ const CFG = {
   tahunAkhir   : 2030,
 };
 
-const {createClient} = supabase;
-const db = createClient(CFG.supabaseUrl, CFG.supabaseKey);
+let db = null; // diinisialisasi saat init()
 
 let allAnggota=[], allAbsen=[], jadwalList=[], importData=[], pengurusDB=[], allIuran=[];
 let ekAnggotaId=null, ekAnggotaNama=null, ekTahun=null, ekJadwal=[];
@@ -1304,6 +1297,10 @@ let timerInterval=null, timerSisa=600;
 
 // ═══ INIT ═══
 async function init(){
+  // Inisialisasi Supabase client
+  const {createClient} = supabase;
+  db = createClient(CFG.supabaseUrl, CFG.supabaseKey);
+
   // ── Cek hash publik (#nomor) — tampilkan kartu tanpa login ──
   const hashVal=window.location.hash.replace('#','');
   if(hashVal&&!isNaN(hashVal)&&parseInt(hashVal)>0){
@@ -1357,6 +1354,7 @@ async function init(){
       currentRole=sess;
       await loadAllData();
       clearTimeout(safetyTimer);
+      document.getElementById('loading-screen').style.display='none';
       showAdmin(currentRole);
     } else {
       clearTimeout(safetyTimer);
@@ -1384,6 +1382,7 @@ function pilihRole(role){ selectedLoginRole=role; }
 
 // ═══ HELPER: sembunyikan semua halaman ═══
 function sembunyikanSemua(){
+  document.getElementById('loading-screen').style.display='none';
   document.getElementById('page-login').style.display='none';
   document.getElementById('page-admin').style.display='none';
   document.getElementById('page-input-token').classList.remove('show');
@@ -1467,7 +1466,7 @@ function showAdmin(role){
     gotoTab('anggota');
     cekHashAnggota();
     // Muat foto pending untuk persetujuan
-    muat_foto_pending().catch(()=>{});
+    try{ muat_foto_pending(); }catch(e){}
   }
 }
 
@@ -1691,14 +1690,17 @@ function bukaDetailAnggota(id){
 
   // Foto profil
   const avatarEl=document.getElementById('da-avatar');
+  avatarEl.textContent=a.nama[0].toUpperCase();
   if(a._foto_url){
     avatarEl.innerHTML=`<img src="${a._foto_url}" alt="${a.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>`;
   } else {
-    // Coba ambil dari approved foto
-    db.from(CFG.tabelFoto).select('foto_url').eq('anggota_id',a.id).eq('status','approved').maybeSingle()
-      .then(r=>{ if(r.data?.foto_url){ a._foto_url=r.data.foto_url; avatarEl.innerHTML=`<img src="${a._foto_url}" alt="${a.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>`; } })
-      .catch(()=>{});
-    avatarEl.textContent=a.nama[0].toUpperCase();
+    // Coba ambil dari approved foto secara async (tidak blocking)
+    (async()=>{
+      try{
+        const r=await db.from(CFG.tabelFoto).select('foto_url').eq('anggota_id',a.id).eq('status','approved').maybeSingle();
+        if(r.data?.foto_url){ a._foto_url=r.data.foto_url; avatarEl.innerHTML=`<img src="${a._foto_url}" alt="${a.nama}" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>`; }
+      }catch(e){}
+    })();
   }
 
   // Header
@@ -1817,7 +1819,7 @@ function getJadwalPerTahun(){
 let _pubAnggota=null, _pubAbsen=[], _pubJadwal=[], _pubTahunList=[];
 
 async function tampilKartuPublik(nomor){
-  // Sembunyikan semua halaman lain
+  // Sembunyikan loading-screen utama SEGERA
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('page-login').style.display='none';
   const pg=document.getElementById('page-kartu-publik');
@@ -1825,18 +1827,20 @@ async function tampilKartuPublik(nomor){
 
   try{
     // Muat data yang dibutuhkan
-    const[r1,r2,r3,r4,r5]=await Promise.all([
+    const[r1,r2,r3,r4]=await Promise.all([
       db.from(CFG.tabelAnggota).select('*').order('urutan,nama'),
       db.from(CFG.tabelAbsen).select('*'),
       db.from(CFG.tabelJadwal).select('*').order('nomor'),
       db.from(CFG.tabelIuran).select('*').order('tahun'),
-      db.from(CFG.tabelFoto).select('*').eq('status','approved').catch(()=>({data:[]})),
     ]);
     allAnggota=r1.data||[];
     allAbsen=r2.data||[];
     jadwalList=(r3.data||[]).map(j=>({...j,galangan:j.galangan!=null?Number(j.galangan):null}));
     allIuran=(r4.data||[]).map(r=>({...r,nominal:Number(r.nominal||0)}));
-    const fotoApproved=r5.data||[];
+
+    // Muat foto approved (aman, tidak gagalkan load utama)
+    let fotoApproved=[];
+    try{ const rf=await db.from(CFG.tabelFoto).select('*').eq('status','approved'); fotoApproved=rf.data||[]; }catch(e){}
 
     // Cari anggota berdasarkan nomor urutan
     const a=allAnggota.find(x=>Number(x.urutan||0)===nomor)||allAnggota[nomor-1];
@@ -1862,9 +1866,11 @@ async function tampilKartuPublik(nomor){
     }
 
     // Cek apakah ada foto pending untuk anggota ini
-    const rPending=await db.from(CFG.tabelFoto).select('*').eq('status','pending')
-      .or(`anggota_id.eq.${a.id},nama.eq.${a.nama}`).catch(()=>({data:[]}));
-    const hasPending=(rPending.data||[]).length>0;
+    let hasPending=false;
+    try{
+      const rPending=await db.from(CFG.tabelFoto).select('id').eq('status','pending').eq('anggota_id',a.id);
+      hasPending=(rPending.data||[]).length>0;
+    }catch(e){}
     document.getElementById('pub-foto-zone').style.display=hasPending?'none':'block';
     document.getElementById('pub-foto-pending').style.display=hasPending?'block':'none';
     // Simpan id anggota untuk upload
@@ -1996,7 +2002,7 @@ async function uploadFotoAnggota(input){
     const waktuUpload=new Date().toISOString();
 
     // Hapus pending lama jika ada, lalu insert baru
-    await db.from(CFG.tabelFoto).delete().eq('anggota_id',anggotaId).eq('status','pending').catch(()=>{});
+    try{ await db.from(CFG.tabelFoto).delete().eq('anggota_id',anggotaId).eq('status','pending'); }catch(e){}
     const {error}=await db.from(CFG.tabelFoto).insert({
       anggota_id:anggotaId,
       nama:anggotaNama,
@@ -2022,9 +2028,10 @@ async function uploadFotoAnggota(input){
 async function muat_foto_pending(){
   let pendingList=[];
   // Coba dari Supabase
-  const {data}=await db.from(CFG.tabelFoto).select('*').eq('status','pending').order('uploaded_at').catch(()=>({data:null}));
-  if(data) pendingList=data;
-  else {
+  try{
+    const {data}=await db.from(CFG.tabelFoto).select('*').eq('status','pending').order('uploaded_at');
+    if(data) pendingList=data;
+  }catch(e){
     // Fallback localStorage
     pendingList=JSON.parse(localStorage.getItem('foto_pending')||'[]').filter(f=>f.status==='pending');
   }
@@ -2075,16 +2082,15 @@ async function approveFoto(anggotaId,nama){
   // Update avatar di tabel anggota lokal
   const aIdx=allAnggota.findIndex(a=>a.id===anggotaId||a.nama===nama);
   if(aIdx>=0){
-    const fotoData=await db.from(CFG.tabelFoto).select('foto_url').eq('anggota_id',anggotaId).eq('status','approved').single().catch(()=>({data:null}));
-    if(fotoData.data) allAnggota[aIdx]._foto_url=fotoData.data.foto_url;
+    try{ const fotoData=await db.from(CFG.tabelFoto).select('foto_url').eq('anggota_id',anggotaId).eq('status','approved').single(); if(fotoData.data) allAnggota[aIdx]._foto_url=fotoData.data.foto_url; }catch(e){}
   }
   document.getElementById(`fappr-${anggotaId||nama}`)?.remove();
   await muat_foto_pending();
 }
 
 async function tolakFoto(anggotaId,nama){
-  await db.from(CFG.tabelFoto).delete().eq('anggota_id',anggotaId).eq('status','pending').catch(()=>{});
-  // Fallback localStorage
+async function tolakFoto(anggotaId,nama){
+  try{ await db.from(CFG.tabelFoto).delete().eq('anggota_id',anggotaId).eq('status','pending'); }catch(e){}
   const pending=JSON.parse(localStorage.getItem('foto_pending')||'[]');
   const idx=pending.findIndex(f=>f.anggota_id===anggotaId||f.nama===nama);
   if(idx>=0){ pending.splice(idx,1); localStorage.setItem('foto_pending',JSON.stringify(pending)); }
@@ -4550,7 +4556,24 @@ async function bEksporAnalisPPT(){
   showToast('✅ PowerPoint Analisis berhasil diunduh!');
 }
 
-init();
+
+// init dipanggil oleh window.onload di bawah
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" defer onerror="window.PptxGenJS=null"></script>
+<script defer>
+  window.addEventListener('load', function() {
+    try { init(); } catch(e) {
+      document.getElementById('loading-screen').innerHTML =
+        '<div style="text-align:center;padding:30px;color:white"><div style="font-size:36px;margin-bottom:14px">⚠️</div><div style="margin-bottom:8px;font-weight:700">' + e.message + '</div><button onclick="location.reload()" style="padding:10px 24px;background:#C49A4A;color:white;border:none;border-radius:10px;cursor:pointer;font-weight:700;margin-top:12px">🔄 Coba Lagi</button></div>';
+    }
+  });
 </script>
 </body>
 </html>
