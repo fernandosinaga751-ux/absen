@@ -1389,7 +1389,21 @@ async function safeInsertAnggota(obj,nama,hp,urutan){
 async function hapusAnggota(id,nama){
   if(!confirm(`Hapus "${nama}"?\nRiwayat absensi tetap tersimpan.`))return;
   await db.from(CFG.tabelAnggota).delete().eq('id',id);
-  allAnggota=allAnggota.filter(a=>a.id!==id);renderAnggota(allAnggota);muatStats();showToast(`"${nama}" dihapus`);
+  allAnggota=allAnggota.filter(a=>a.id!==id);
+
+  // Renumber urutan agar tetap berurutan 1,2,3,4,...
+  allAnggota.sort((a,b)=>(a.urutan||999)-(b.urutan||999));
+  const updates=[];
+  allAnggota.forEach((a,i)=>{
+    const newUrutan=i+1;
+    if((a.urutan||0)!==newUrutan){
+      a.urutan=newUrutan;
+      updates.push(db.from(CFG.tabelAnggota).update({urutan:newUrutan}).eq('id',a.id));
+    }
+  });
+  if(updates.length) await Promise.all(updates);
+
+  renderAnggota(allAnggota);muatStats();showToast(`"${nama}" dihapus & nomor urut diperbarui`);
 }
 
 // Edit anggota
